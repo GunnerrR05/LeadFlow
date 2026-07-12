@@ -3,6 +3,7 @@ from tkinter import messagebox
 
 from telas.cadastro import cadastrar
 from telas.listar import abrir_lista
+from telas.buscar import abrir_busca
 
 from excel import (
     salvar_lead,
@@ -16,7 +17,7 @@ lead_selecionado = None
 
 janela = tk.Tk()
 janela.title("LeadFlow")
-janela.geometry("400x300")
+janela.geometry("600x600")
 
 
 titulo = tk.Label(
@@ -193,48 +194,11 @@ botao_listar.pack()
 #--------------------------------------#
 
 
-def buscar():
-    telefone = campo_busca.get()
-
-    lead = buscar_lead_por_telefone(telefone)
-
-    global lead_selecionado
-
-    lead_selecionado = lead
-
-
-    if lead is not None:
-        campo_nome.delete(0, tk.END)
-        campo_nome.insert(0, lead["nome"])
-
-        campo_telefone.delete(0, tk.END)
-        campo_telefone.insert(0, lead["telefone"])
-
-        campo_email.delete(0, tk.END)
-        campo_email.insert(0, lead["email"])
-
-        campo_interesse.delete(0, tk.END)
-        campo_interesse.insert(0, lead["interesse"])
-
-        campo_origem.delete(0, tk.END)
-        campo_origem.insert(0, lead["origem"])
-
-        campo_consultor.delete(0, tk.END)
-        campo_consultor.insert(0, lead["consultor"])
-
-        campo_observacao.delete(0, tk.END)
-        campo_observacao.insert(0, lead["observacao"])
-
-    else:
-        messagebox.showwarning(
-            "Não encontrado",
-            "Nenhum lead encontrado com esse telefone."
-    )
 
 botao_buscar = tk.Button(
     janela,
     text="Buscar",
-    command=buscar
+    command=abrir_busca
 )
 
 botao_buscar.pack()
