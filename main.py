@@ -1,4 +1,4 @@
-from excel import salvar_lead, listar_leads, atualizar_status
+from excel import salvar_lead, listar_leads, atualizar_status, dashboard, listar_followups
 
 def cadastrar_lead():
     nome = input("Nome: ")
@@ -8,8 +8,25 @@ def cadastrar_lead():
     origem = input("Origem: ")
     consultor = input("Consultor: ")
     observacoes = input("Observações: ")
+    proximo_contato = input("Próximo contato (DD/MM/AAAA): ")
+    ultima_interacao = input("Última interação: ")
+    print("""
+    Prioridade:
+    1 - Quente
+    2 - Morno
+    3 - Frio
+    """)
+    opcao_prioridade = input("Escolha: ")
+    prioridades = {
+        "1": "Quente",
+        "2": "Morno",
+        "3": "Frio"
+    }
+    prioridade = prioridades.get(opcao_prioridade, "Morno")
 
-    return {
+
+
+    return{
         "nome": nome,
         "telefone": telefone,
         "email": email,
@@ -17,7 +34,10 @@ def cadastrar_lead():
         "origem": origem,
         "consultor": consultor,
         "observacao": observacoes,
-        "status": "Novo"
+        "status": "Novo",
+        "prioridade": prioridade,
+        "proximo_contato": proximo_contato,
+        "ultima_interacao": ultima_interacao
     }
 
 
@@ -26,7 +46,9 @@ while True:
     print("1 - Cadastrar lead")
     print("2 - Listar leads")
     print("3 - Atualizar status")
-    print("4 - Sair")
+    print("4 - Dashboard")
+    print("5 - Follow-ups")
+    print("6 - Sair")
 
     opcao = input("Escolha: ")
 
@@ -65,6 +87,13 @@ while True:
         print("Status atualizado!")
 
     elif opcao == "4":
+
+        dashboard()
+
+    elif opcao == "5":
+        listar_followups()
+
+    elif opcao == "6":
         print("Encerrando o sistema...")
         break
     else:

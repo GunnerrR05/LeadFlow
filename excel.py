@@ -17,6 +17,9 @@ def criar_planilha():
     planilha['H1'] = 'OBSERVAÇÕES'
     planilha["I1"] = "STATUS"
     planilha['J1'] = 'HISTÓRICO'
+    planilha['K1'] = 'PROXIMO CONTATO'
+    planilha['L1'] = 'ULTIMA INTERACAO'
+    planilha['M1'] = 'PRIORIDADE'
 
     
     
@@ -42,6 +45,9 @@ def salvar_lead(lead):
     planilha[f"J{linha_vazia}"] = (
         f"[{data_formatada}] Criado - {lead['status']}"
     )
+    planilha[f'K{linha_vazia}'] = lead["proximo_contato"]
+    planilha[f'L{linha_vazia}'] = lead["ultima_interacao"]
+    planilha[f'M{linha_vazia}'] = lead["prioridade"]
     
 
     arquivo.save('leads.xlsx')
@@ -64,6 +70,9 @@ def listar_leads():
         observacao = planilha[f"H{linha}"].value
         status = planilha[f"I{linha}"].value
         historico = planilha[f"J{linha}"].value
+        prioridade = planilha[f"M{linha}"].value
+        proximo_contato = planilha[f"K{linha}"].value
+        ultima_interacao = planilha[f"L{linha}"].value
 
         if status is None:
             status = "Novo"
@@ -79,6 +88,9 @@ def listar_leads():
         print(f"Observações: {observacao}")
         print(f"Status: {status}")
         print(f"Histórico: {historico}")
+        print(f"Prioridade: {prioridade}")
+        print(f"Próximo contato: {proximo_contato}")
+        print(f"Última interação: {ultima_interacao}")
         
         
         print("-" * 30)
@@ -207,5 +219,174 @@ def atualizar_status(telefone, novo_status):
             return True
 
     return False
-    
 
+
+
+def dashboard():
+
+    arquivo = load_workbook("leads.xlsx")
+    planilha = arquivo.active
+
+    total = 0
+
+    status_contagem = {
+        "Novo": 0,
+        "Contato realizado": 0,
+        "Proposta enviada": 0,
+        "Fechado": 0,
+        "Perdido": 0
+    }
+
+
+    for linha in range(2, planilha.max_row + 1):
+
+        nome = planilha[f"A{linha}"].value
+        status = planilha[f"I{linha}"].value
+
+        if status is None:
+            status = "Novo"
+
+        if nome:
+
+            total += 1
+
+            if status in status_contagem:
+                status_contagem[status] += 1
+
+
+    print("\n===== DASHBOARD =====")
+
+    print(f"\nTotal de leads: {total}\n")
+
+
+    for status, quantidade in status_contagem.items():
+
+        print(f"{status}: {quantidade}")
+
+
+    if total > 0:
+
+        conversao = (
+            status_contagem["Fechado"]
+            / total
+        ) * 100
+
+        print(
+            f"\nTaxa de conversão: {conversao:.1f}%"
+        )
+
+
+    print("====================\n")    
+
+    print("\n===== FUNIL DE VENDAS =====")
+
+    etapas = {
+        "Novo": status_contagem["Novo"],
+        "Contato realizado": status_contagem["Contato realizado"],
+        "Proposta enviada": status_contagem["Proposta enviada"],
+        "Fechado": status_contagem["Fechado"],
+        "Perdido": status_contagem["Perdido"]
+    }
+
+    for nome, quantidade in etapas.items():
+        barra = "█" * quantidade
+        print(f"{nome:<18} {barra} {quantidade}")
+
+
+
+def listar_followups():
+
+    arquivo = load_workbook("leads.xlsx")
+    planilha = arquivo.active
+
+    hoje = datetime.now().date()
+
+    atrasados = []
+    hoje_lista = []
+    proximos = []
+
+    def peso_prioridade(lead):
+        ordem = {
+            "Quente": 1,
+            "Morno": 2,
+            "Frio": 3
+        }
+
+        return ordem.get(
+            lead["prioridade"],
+            4
+        )
+
+    for linha in range(2, planilha.max_row + 1):
+
+        nome = planilha[f"A{linha}"].value
+        telefone = planilha[f"B{linha}"].value
+        status = planilha[f"I{linha}"].value
+        prioridade = planilha[f"M{linha}"].value
+        contato = planilha[f"K{linha}"].value
+
+        if contato:
+
+            try:
+                data_contato = datetime.strptime(
+                    contato,
+                    "%d/%m/%Y"
+                ).date()
+
+                lead = {
+                    "nome": nome,
+                    "telefone": telefone,
+                    "status": status,
+                    "prioridade": prioridade,
+                    "data": contato
+                }
+
+                if data_contato < hoje:
+                    atrasados.append(lead)
+
+                elif data_contato == hoje:
+                    hoje_lista.append(lead)
+
+                else:
+                    proximos.append(lead)
+
+            except:
+                pass
+
+
+    atrasados.sort(key=peso_prioridade)
+    hoje_lista.sort(key=peso_prioridade)
+    proximos.sort(key=peso_prioridade)
+
+
+    print("\n===== FOLLOW-UPS =====")
+
+
+    print("\n🔴 ATRASADOS")
+    for lead in atrasados:
+        print("----------------")
+        print(f"Nome: {lead['nome']}")
+        print(f"Telefone: {lead['telefone']}")
+        print(f"Status: {lead['status']}")
+        print(f"Prioridade: {lead['prioridade']}")
+        print(f"Contato: {lead['data']}")
+
+
+    print("\n🟡 HOJE")
+    for lead in hoje_lista:
+        print("----------------")
+        print(f"Nome: {lead['nome']}")
+        print(f"Telefone: {lead['telefone']}")
+        print(f"Status: {lead['status']}")
+        print(f"Prioridade: {lead['prioridade']}")
+        print(f"Contato: {lead['data']}")
+
+
+    print("\n🟢 PRÓXIMOS")
+    for lead in proximos:
+        print("----------------")
+        print(f"Nome: {lead['nome']}")
+        print(f"Telefone: {lead['telefone']}")
+        print(f"Status: {lead['status']}")
+        print(f"Prioridade: {lead['prioridade']}")
+        print(f"Contato: {lead['data']}")
