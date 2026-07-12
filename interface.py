@@ -5,6 +5,8 @@ from telas.cadastro import cadastrar
 from telas.listar import abrir_lista
 from telas.buscar import abrir_busca
 
+from componentes.campos import criar_campos
+
 from excel import (
     salvar_lead,
     pegar_leads, 
@@ -27,100 +29,23 @@ titulo = tk.Label(
     )
 titulo.pack()
 
-######################################
+campos = criar_campos(janela)
 
-label_busca = tk.Label(
-    janela,
-    text="Buscar por telefone"
-)
-label_busca.pack()
-campo_busca = tk.Entry(janela)
-campo_busca.pack()
 
 ######################################
-
-label_nome = tk.Label(
-    janela,
-    text="Nome"
-    )
-label_nome.pack()
-campo_nome = tk.Entry(janela)
-campo_nome.pack()
-
-######################################
-
-label_telefone = tk.Label(
-    janela,
-    text="Telefone"
-    )
-label_telefone.pack()
-campo_telefone = tk.Entry(janela)
-campo_telefone.pack()
-
-######################################
-
-label_email = tk.Label(
-    janela,
-    text="E-mail"
-    )
-label_email.pack()
-campo_email = tk.Entry(janela)
-campo_email.pack()
-
-######################################
-
-label_interesse = tk.Label(
-    janela,
-    text="Interesse"
-    )
-label_interesse.pack()
-campo_interesse = tk.Entry(janela)
-campo_interesse.pack()
-
-######################################
-
-label_origem = tk.Label(
-    janela,
-    text="Origem"
-    )
-label_origem.pack()
-campo_origem = tk.Entry(janela)
-campo_origem.pack()
-
-######################################
-
-label_consultor = tk.Label(
-    janela,
-    text="Consultor"
-    )
-label_consultor.pack()
-campo_consultor = tk.Entry(janela)
-campo_consultor.pack()
-
-######################################
-
-label_observacao = tk.Label(
-    janela,
-    text="Observações"
-    )
-label_observacao.pack()
-campo_observacao = tk.Entry(janela)
-campo_observacao.pack()
-
-#--------------------------------------#
 
 
 botao_cadastrar = tk.Button(
     janela,
     text="Cadastrar Lead",
     command=lambda: cadastrar(
-        campo_nome,
-        campo_telefone,
-        campo_email,
-        campo_interesse,
-        campo_origem,
-        campo_consultor,
-        campo_observacao
+        campos["nome"],
+        campos["telefone"],
+        campos["email"],
+        campos["interesse"],
+        campos["origem"],
+        campos["consultor"],
+        campos["observacao"]
     )
 )
 
@@ -133,13 +58,13 @@ botao_cadastrar.pack()
 def atualizar():
     if lead_selecionado is not None:
 
-        lead_selecionado["nome"] = campo_nome.get()
-        lead_selecionado["telefone"] = campo_telefone.get()
-        lead_selecionado["email"] = campo_email.get()
-        lead_selecionado["interesse"] = campo_interesse.get()
-        lead_selecionado["origem"] = campo_origem.get()
-        lead_selecionado["consultor"] = campo_consultor.get()
-        lead_selecionado["observacao"] = campo_observacao.get()
+        lead_selecionado["nome"] = campos["nome"].get()
+        lead_selecionado["telefone"] = campos["telefone"].get()
+        lead_selecionado["email"] = campos["email"].get()
+        lead_selecionado["interesse"] = campos["interesse"].get()
+        lead_selecionado["origem"] = campos["origem"].get()
+        lead_selecionado["consultor"] = campos["consultor"].get()
+        lead_selecionado["observacao"] = campos["observacao"].get()
 
         atualizar_lead(lead_selecionado)
 
@@ -161,14 +86,13 @@ botao_atualizar.pack()
 
 
 def limpar():
-    campo_nome.delete(0, tk.END)
-    campo_telefone.delete(0, tk.END)
-    campo_email.delete(0, tk.END)
-    campo_interesse.delete(0, tk.END)
-    campo_origem.delete(0, tk.END)
-    campo_consultor.delete(0, tk.END)
-    campo_observacao.delete(0, tk.END)
-    campo_busca.delete(0, tk.END)
+    campos["nome"].delete(0, tk.END)
+    campos["telefone"].delete(0, tk.END)
+    campos["email"].delete(0, tk.END)
+    campos["interesse"].delete(0, tk.END)
+    campos["origem"].delete(0, tk.END)
+    campos["consultor"].delete(0, tk.END)
+    campos["observacao"].delete(0, tk.END)
 
 botao_limpar = tk.Button(
     janela,
