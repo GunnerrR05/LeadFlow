@@ -15,6 +15,8 @@ def criar_planilha():
     planilha['F1'] = 'CONSULTOR'
     planilha['G1'] = 'DATA DE CADASTRO'
     planilha['H1'] = 'OBSERVAÇÕES'
+    planilha["I1"] = "STATUS"
+    planilha['J1'] = 'HISTÓRICO'
 
     
     
@@ -36,6 +38,10 @@ def salvar_lead(lead):
     planilha[f"F{linha_vazia}"] = lead["consultor"]
     planilha[f"G{linha_vazia}"] = data_formatada
     planilha[f"H{linha_vazia}"] = lead["observacao"]
+    planilha[f"I{linha_vazia}"] = lead["status"]
+    planilha[f"J{linha_vazia}"] = (
+        f"[{data_formatada}] Criado - {lead['status']}"
+    )
     
 
     arquivo.save('leads.xlsx')
@@ -56,6 +62,11 @@ def listar_leads():
         consultor = planilha[f"F{linha}"].value
         data = planilha[f"G{linha}"].value
         observacao = planilha[f"H{linha}"].value
+        status = planilha[f"I{linha}"].value
+        historico = planilha[f"J{linha}"].value
+
+        if status is None:
+            status = "Novo"
 
         print(f"\nLead {linha - 1}")
         print(f"Nome: {nome}")
@@ -66,6 +77,10 @@ def listar_leads():
         print(f"Consultor: {consultor}")
         print(f"Data: {data}")
         print(f"Observações: {observacao}")
+        print(f"Status: {status}")
+        print(f"Histórico: {historico}")
+        
+        
         print("-" * 30)
 
 
@@ -100,7 +115,8 @@ def pegar_leads():
                 "origem": planilha[f"E{linha}"].value,
                 "consultor": planilha[f"F{linha}"].value,
                 "data": planilha[f"G{linha}"].value,
-                "observacao": planilha[f"H{linha}"].value
+                "observacao": planilha[f"H{linha}"].value,
+                "status": planilha[f"I{linha}"].value
             }
 
         leads.append(lead)
@@ -125,7 +141,8 @@ def buscar_lead_por_telefone(telefone_busca):
                 "interesse": planilha[f"D{linha}"].value,
                 "origem": planilha[f"E{linha}"].value,
                 "consultor": planilha[f"F{linha}"].value,
-                "observacao": planilha[f"H{linha}"].value
+                "observacao": planilha[f"H{linha}"].value,
+                "status": planilha[f"I{linha}"].value
             }
 
             return lead
@@ -146,6 +163,7 @@ def atualizar_lead(lead):
     planilha[f"E{linha}"] = lead["origem"]
     planilha[f"F{linha}"] = lead["consultor"]
     planilha[f"H{linha}"] = lead["observacao"]
+    planilha[f"I{linha}"] = lead["status"]
 
     arquivo.save("leads.xlsx")
 
@@ -157,5 +175,37 @@ def excluir_lead(linha):
     planilha.delete_rows(linha)
 
     arquivo.save("leads.xlsx")
+
+
+
+def atualizar_status(telefone, novo_status):
+
+    arquivo = load_workbook("leads.xlsx")
+    planilha = arquivo.active
+
+    agora = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+    for linha in range(2, planilha.max_row + 1):
+
+        if planilha[f"B{linha}"].value == telefone:
+
+            status_antigo = planilha[f"I{linha}"].value
+
+            planilha[f"I{linha}"] = novo_status
+
+            historico_atual = planilha[f"J{linha}"].value
+
+            novo_historico = (
+                f"{historico_atual}\n"
+                f"[{agora}] {status_antigo} -> {novo_status}"
+            )
+
+            planilha[f"J{linha}"] = novo_historico
+
+            arquivo.save("leads.xlsx")
+
+            return True
+
+    return False
     
 
