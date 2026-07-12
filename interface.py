@@ -6,6 +6,9 @@ from telas.listar import abrir_lista
 from telas.buscar import abrir_busca
 
 from componentes.campos import criar_campos
+from componentes.botoes import criar_botoes
+
+from servicos.leads import cadastrar_lead
 
 from excel import (
     salvar_lead,
@@ -32,24 +35,11 @@ titulo.pack()
 campos = criar_campos(janela)
 
 
+
+
 ######################################
 
 
-botao_cadastrar = tk.Button(
-    janela,
-    text="Cadastrar Lead",
-    command=lambda: cadastrar(
-        campos["nome"],
-        campos["telefone"],
-        campos["email"],
-        campos["interesse"],
-        campos["origem"],
-        campos["consultor"],
-        campos["observacao"]
-    )
-)
-
-botao_cadastrar.pack()
 
 
 #--------------------------------------#
@@ -73,13 +63,7 @@ def atualizar():
             "Lead atualizado com sucesso!"
         )
 
-botao_atualizar = tk.Button(
-    janela,
-    text="Atualizar Lead",
-    command=atualizar
-    )
 
-botao_atualizar.pack()
 
 
 #--------------------------------------#
@@ -94,41 +78,6 @@ def limpar():
     campos["consultor"].delete(0, tk.END)
     campos["observacao"].delete(0, tk.END)
 
-botao_limpar = tk.Button(
-    janela,
-    text="Limpar",
-    command=limpar
-    )
-
-botao_limpar.pack()
-
-
-#--------------------------------------#
-
-
-botao_listar = tk.Button(
-    janela,
-    text="Listar Leads",
-    command=abrir_lista
-    )
-
-botao_listar.pack()
-
-
-#--------------------------------------#
-
-
-
-botao_buscar = tk.Button(
-    janela,
-    text="Buscar",
-    command=abrir_busca
-)
-
-botao_buscar.pack()
-
-
-#--------------------------------------#
 
 
 def excluir():
@@ -151,13 +100,27 @@ def excluir():
             limpar()
             lead_selecionado = None
 
-botao_excluir = tk.Button(
+
+
+def cadastrar():
+
+    cadastrar_lead(campos)
+
+    messagebox.showinfo(
+        "Sucesso",
+        "Lead cadastrado com sucesso!"
+    )
+
+
+botoes = criar_botoes(
     janela,
-    text="Excluir Lead",
-    command=excluir
+    cadastrar,
+    atualizar,
+    limpar,
+    abrir_lista,
+    abrir_busca,
+    campos
 )
 
-botao_excluir.pack()
-
-
+    
 janela.mainloop()
