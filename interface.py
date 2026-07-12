@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import messagebox
+
 from telas.cadastro import cadastrar
+from telas.listar import abrir_lista
+
 from excel import (
     salvar_lead,
     pegar_leads, 
@@ -178,43 +181,10 @@ botao_limpar.pack()
 #--------------------------------------#
 
 
-def listar():
-    janela_lista = tk.Toplevel()
-
-    janela_lista.title("Leads cadastrados")
-
-    janela_lista.geometry("400x300")
-
-    caixa_texto = tk.Text(janela_lista)
-
-    caixa_texto.pack()
-
-    leads = pegar_leads()
-
-
-    for numero, lead in enumerate(leads, start=1):
-        texto = (
-            f"LEAD {numero}\n"
-            f"================\n"
-            f"Nome: {lead['nome']}\n"
-            f"Telefone: {lead['telefone']}\n"
-            f"E-mail: {lead['email']}\n"
-            f"Interesse: {lead['interesse']}\n"
-            f"Origem: {lead['origem']}\n"
-            f"Consultor: {lead['consultor']}\n"
-            f"Data de cadastro: {lead['data']}\n"
-            f"Observações: {lead['observacao']}\n"
-            f"\n"
-        )
-
-        caixa_texto.insert(tk.END, texto)
-    
-
-
 botao_listar = tk.Button(
     janela,
     text="Listar Leads",
-    command=listar
+    command=abrir_lista
     )
 
 botao_listar.pack()
