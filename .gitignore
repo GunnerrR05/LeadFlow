@@ -1,0 +1,13 @@
+# Cache do Py
+__pycache__/
+*.pyc
+
+# Configurações do VS
+.vscode/
+
+# Ambiente virtual 
+venv/
+.env
+
+# Banco de dados local
+leads.xlsx
