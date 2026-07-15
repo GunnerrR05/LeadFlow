@@ -138,7 +138,7 @@ def abrir_busca():
                     lead_encontrado[campo] = campos_edicao[campo].get()
 
 
-                atualizar_lead(lead_encontrado, campos_edicao)
+                atualizar_lead(lead_encontrado, lead_encontrado)
 
 
                 messagebox.showinfo(
