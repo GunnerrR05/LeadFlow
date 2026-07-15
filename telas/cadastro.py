@@ -1,5 +1,5 @@
-from excel import salvar_lead
 from tkinter import messagebox, END
+from servicos.leads import cadastrar_lead
 
 
 def cadastrar(
@@ -11,39 +11,23 @@ def cadastrar(
     campo_consultor,
     campo_observacao
 ):
-    nome = campo_nome.get()
-    telefone = campo_telefone.get()
-    email = campo_email.get()
-    interesse = campo_interesse.get()
-    origem = campo_origem.get()
-    consultor = campo_consultor.get()
-    observacao = campo_observacao.get()
 
-    lead = {
-        "nome": nome,
-        "telefone": telefone,
-        "email": email,
-        "interesse": interesse,
-        "origem": origem,
-        "consultor": consultor,
-        "observacao": observacao,
-        "status": "Novo",
-        "prioridade": "Morno",
-        "proximo_contato": "",
-        "ultima_interacao": ""
+    campos = {
+        "nome": campo_nome,
+        "telefone": campo_telefone,
+        "email": campo_email,
+        "interesse": campo_interesse,
+        "origem": campo_origem,
+        "consultor": campo_consultor,
+        "observacao": campo_observacao
     }
 
-    salvar_lead(lead)
-    
+    cadastrar_lead(campos)
+
     messagebox.showinfo(
         "Sucesso",
         "Lead cadastrado com sucesso!"
     )
-    
-    campo_nome.delete(0, END)
-    campo_telefone.delete(0, END)
-    campo_email.delete(0, END)
-    campo_interesse.delete(0, END)
-    campo_origem.delete(0, END)
-    campo_consultor.delete(0, END)
-    campo_observacao.delete(0, END)
+
+    for campo in campos.values():
+        campo.delete(0, END)
