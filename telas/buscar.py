@@ -1,8 +1,11 @@
 import tkinter as tk
 from tkinter import messagebox
 
-from excel import buscar_lead_por_telefone
-from excel import atualizar_lead
+from servicos.leads import (
+    buscar_lead,
+    atualizar_lead,
+    excluir_lead
+)
 
 from servicos.leads import excluir_lead
 
@@ -44,7 +47,7 @@ def abrir_busca():
         telefone = campo_telefone.get()
 
         global lead_encontrado
-        lead_encontrado = buscar_lead_por_telefone(telefone)
+        lead_encontrado = buscar_lead(telefone)
 
 
         resultado.delete(
@@ -135,7 +138,7 @@ def abrir_busca():
                     lead_encontrado[campo] = campos_edicao[campo].get()
 
 
-                atualizar_lead(lead_encontrado)
+                atualizar_lead(lead_encontrado, campos_edicao)
 
 
                 messagebox.showinfo(
@@ -183,9 +186,7 @@ def excluir():
 
     if lead_encontrado:
 
-        excluir_lead(
-            lead_encontrado
-        )
+        excluir_lead(lead_encontrado)
 
         messagebox.showinfo(
             "Sucesso",

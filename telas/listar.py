@@ -1,5 +1,5 @@
 import tkinter as tk
-from excel import pegar_leads
+from servicos.leads import listar_leads
 
 
 def abrir_lista():
@@ -18,7 +18,7 @@ def abrir_lista():
     )
 
 
-    leads = pegar_leads()
+    leads = listar_leads()
 
 
     for numero, lead in enumerate(leads, start=1):

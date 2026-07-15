@@ -1,6 +1,11 @@
 from datetime import datetime
-from excel import salvar_lead, atualizar_lead as atualizar_lead_excel
-from excel import excluir_lead as excluir_lead_excel
+from excel import (
+    salvar_lead,
+    pegar_leads,
+    buscar_lead_por_telefone,
+    atualizar_lead as atualizar_lead_excel,
+    excluir_lead as excluir_lead_excel
+)
 
 
 def cadastrar_lead(campos):
@@ -43,8 +48,17 @@ def atualizar_lead(lead, campos):
 
 
 
+def buscar_lead(telefone):
+
+    return buscar_lead_por_telefone(telefone)
+
+
+
 def excluir_lead(lead):
 
-    excluir_lead_excel(
-        lead
-    )
+    excluir_lead_excel(lead["linha"])
+
+
+def listar_leads():
+
+    return pegar_leads()
