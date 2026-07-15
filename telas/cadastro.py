@@ -1,5 +1,10 @@
+import tkinter as tk
+
 from tkinter import messagebox, END
+
 from servicos.leads import cadastrar_lead
+
+from componentes.campos import criar_campos
 
 
 def cadastrar(
@@ -31,3 +36,37 @@ def cadastrar(
 
     for campo in campos.values():
         campo.delete(0, END)
+
+
+
+def abrir_cadastro():
+
+    janela_cadastro = tk.Toplevel()
+
+    janela_cadastro.title("Cadastrar Lead")
+    janela_cadastro.geometry("400x500")
+
+
+    campos = criar_campos(janela_cadastro)
+
+
+    def salvar():
+
+        cadastrar_lead(campos)
+
+        messagebox.showinfo(
+            "Sucesso",
+            "Lead cadastrado com sucesso!"
+        )
+
+        for campo in campos.values():
+            campo.delete(0, END)
+
+
+    botao = tk.Button(
+        janela_cadastro,
+        text="Cadastrar Lead",
+        command=salvar
+    )
+
+    botao.pack(pady=10)

@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 
-from telas.cadastro import cadastrar
+from telas.cadastro import abrir_cadastro
 from telas.listar import abrir_lista
 from telas.buscar import abrir_busca
 
@@ -100,19 +100,10 @@ def excluir():
 
 
 
-def cadastrar():
-
-    cadastrar_lead(campos)
-
-    messagebox.showinfo(
-        "Sucesso",
-        "Lead cadastrado com sucesso!"
-    )
-
 
 botoes = criar_botoes(
     janela,
-    cadastrar,
+    abrir_cadastro,
     limpar,
     abrir_lista,
     abrir_busca,

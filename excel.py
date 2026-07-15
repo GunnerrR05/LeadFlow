@@ -168,14 +168,18 @@ def atualizar_lead(lead):
 
     linha = lead["linha"]
 
-    planilha[f"A{linha}"] = lead["nome"]
-    planilha[f"B{linha}"] = lead["telefone"]
-    planilha[f"C{linha}"] = lead["email"]
-    planilha[f"D{linha}"] = lead["interesse"]
-    planilha[f"E{linha}"] = lead["origem"]
-    planilha[f"F{linha}"] = lead["consultor"]
-    planilha[f"H{linha}"] = lead["observacao"]
-    planilha[f"I{linha}"] = lead["status"]
+    planilha[f"A{linha}"] = lead.get("nome", "")
+    planilha[f"B{linha}"] = lead.get("telefone", "")
+    planilha[f"C{linha}"] = lead.get("email", "")
+    planilha[f"D{linha}"] = lead.get("interesse", "")
+    planilha[f"E{linha}"] = lead.get("origem", "")
+    planilha[f"F{linha}"] = lead.get("consultor", "")
+    planilha[f"G{linha}"] = lead.get("observacao", "")
+    planilha[f"H{linha}"] = lead.get("status", "")
+    planilha[f"I{linha}"] = lead.get("prioridade", "")
+    planilha[f"J{linha}"] = lead.get("proximo_contato", "")
+    planilha[f"K{linha}"] = lead.get("ultima_interacao", "")
+    planilha[f"L{linha}"] = lead.get("data", "")
 
     arquivo.save("leads.xlsx")
 
