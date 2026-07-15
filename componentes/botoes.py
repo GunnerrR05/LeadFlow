@@ -4,7 +4,6 @@ import tkinter as tk
 def criar_botoes(
     janela,
     cadastrar,
-    atualizar,
     limpar,
     abrir_lista,
     abrir_busca,
@@ -22,14 +21,6 @@ def criar_botoes(
 
     botoes["cadastrar"].pack()
 
-
-    botoes["atualizar"] = tk.Button(
-        janela,
-        text="Atualizar Lead",
-        command=atualizar
-    )
-
-    botoes["atualizar"].pack()
 
 
     botoes["limpar"] = tk.Button(

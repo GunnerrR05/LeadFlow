@@ -9,6 +9,7 @@ from componentes.campos import criar_campos
 from componentes.botoes import criar_botoes
 
 from servicos.leads import cadastrar_lead
+from servicos.leads import cadastrar_lead, atualizar_lead
 
 from excel import (
     salvar_lead,
@@ -46,23 +47,20 @@ campos = criar_campos(janela)
 
 
 def atualizar():
+
+    global lead_selecionado
+
     if lead_selecionado is not None:
 
-        lead_selecionado["nome"] = campos["nome"].get()
-        lead_selecionado["telefone"] = campos["telefone"].get()
-        lead_selecionado["email"] = campos["email"].get()
-        lead_selecionado["interesse"] = campos["interesse"].get()
-        lead_selecionado["origem"] = campos["origem"].get()
-        lead_selecionado["consultor"] = campos["consultor"].get()
-        lead_selecionado["observacao"] = campos["observacao"].get()
-
-        atualizar_lead(lead_selecionado)
+        atualizar_lead(
+            lead_selecionado,
+            campos
+        )
 
         messagebox.showinfo(
             "Sucesso",
             "Lead atualizado com sucesso!"
         )
-
 
 
 
@@ -115,7 +113,6 @@ def cadastrar():
 botoes = criar_botoes(
     janela,
     cadastrar,
-    atualizar,
     limpar,
     abrir_lista,
     abrir_busca,
