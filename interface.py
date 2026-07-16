@@ -100,7 +100,6 @@ def excluir():
 
 
 
-
 botoes = criar_botoes(
     janela,
     abrir_cadastro,

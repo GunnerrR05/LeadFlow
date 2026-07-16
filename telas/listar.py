@@ -11,6 +11,7 @@ def abrir_lista():
     janela_lista.title("Leads cadastrados")
     janela_lista.geometry("1000x400")
 
+    janela_lista.lead_selecionado = None
 
     tabela = ttk.Treeview(
         janela_lista,
@@ -50,29 +51,31 @@ def abrir_lista():
         fill="both"
     )
 
+    def carregar_tabela():
+    
+        for item in tabela.get_children():
+            tabela.delete(item)
 
+        leads = listar_leads()
 
-    leads = listar_leads()
-
-    janela_lista.lead_selecionado = None
-
-
-    for numero, lead in enumerate(leads, start=2):
-
-        tabela.insert(
-            "",
-            tk.END,
-            iid=str(numero),
-            values=(
-                lead["nome"],
-                lead["telefone"],
-                lead["email"],
-                lead["interesse"],
-                lead["origem"],
-                lead["consultor"],
-                lead["observacao"]
+        for lead in leads:
+            tabela.insert(
+                "",
+                tk.END,
+                values=(
+                    lead["nome"],
+                    lead["telefone"],
+                    lead["email"],
+                    lead["interesse"],
+                    lead["origem"],
+                    lead["consultor"],
+                    lead["observacao"]
+                )
             )
-        )
+
+    carregar_tabela()
+
+
 
     
     
@@ -81,12 +84,12 @@ def abrir_lista():
         item = tabela.selection()
 
         if item:
-            linha = item[0]
+            item = item[0]
 
             valores = tabela.item(item)["values"]
 
             janela_lista.lead_selecionado = {
-                "linha": int(linha),
+                "linha": tabela.index(item) + 2,
                 "nome": valores[0],
                 "telefone": valores[1],
                 "email": valores[2],
@@ -136,27 +139,21 @@ def abrir_lista():
 
             def salvar():
 
-                lead_atualizado = {
-                    "linha": janela_lista.lead_selecionado["linha"]
-                }
+                lead_atualizado = janela_lista.lead_selecionado.copy()
 
                 for campo in campos:
                     lead_atualizado[campo] = campos[campo].get()
 
-
                 from servicos.leads import atualizar_lead
 
-                atualizar_lead(
-                    lead_atualizado,
-                    lead_atualizado
-                )
-
+                atualizar_lead(lead_atualizado)
 
                 messagebox.showinfo(
                     "Sucesso",
                     "Lead atualizado!"
                 )
 
+                carregar_tabela()
                 janela_editar.destroy()
 
 
@@ -188,7 +185,8 @@ def abrir_lista():
                 "Lead excluído!"
             )
 
-            janela_lista.destroy()
+            carregar_tabela()            
+
 
         else:
             messagebox.showwarning(

@@ -32,16 +32,8 @@ def cadastrar_lead(campos):
 
 
 
-def atualizar_lead(lead, campos):
-
-    lead["nome"] = campos["nome"]
-    lead["telefone"] = campos["telefone"]
-    lead["email"] = campos["email"]
-    lead["interesse"] = campos["interesse"]
-    lead["origem"] = campos["origem"]
-    lead["consultor"] = campos["consultor"]
-    lead["observacao"] = campos["observacao"]
-
+def atualizar_lead(lead):
+    
     atualizar_lead_excel(lead)
 
     return lead

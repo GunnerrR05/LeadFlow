@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
 
+
 from servicos.leads import (
     buscar_lead,
     atualizar_lead,
@@ -138,7 +139,7 @@ def abrir_busca():
                     lead_encontrado[campo] = campos_edicao[campo].get()
 
 
-                atualizar_lead(lead_encontrado, lead_encontrado)
+                atualizar_lead(lead_encontrado)
 
 
                 messagebox.showinfo(
