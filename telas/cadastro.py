@@ -14,7 +14,10 @@ def cadastrar(
     campo_interesse,
     campo_origem,
     campo_consultor,
-    campo_observacao
+    campo_observacao,
+    campo_status,
+    campo_prioridade,
+    campo_proximo_contato
 ):
 
     campos = {
@@ -24,7 +27,10 @@ def cadastrar(
         "interesse": campo_interesse,
         "origem": campo_origem,
         "consultor": campo_consultor,
-        "observacao": campo_observacao
+        "observacao": campo_observacao,
+        "status": campo_status,
+        "prioridade": campo_prioridade,
+        "proximo_contato": campo_proximo_contato
     }
 
     cadastrar_lead(campos)
@@ -36,7 +42,6 @@ def cadastrar(
 
     for campo in campos.values():
         campo.delete(0, END)
-
 
 
 def abrir_cadastro():

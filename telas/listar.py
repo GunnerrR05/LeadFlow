@@ -9,7 +9,7 @@ def abrir_lista():
     janela_lista = tk.Toplevel()
 
     janela_lista.title("Leads cadastrados")
-    janela_lista.geometry("1000x400")
+    janela_lista.geometry("1600x600")
 
     janela_lista.lead_selecionado = None
 
@@ -22,7 +22,11 @@ def abrir_lista():
             "interesse",
             "origem",
             "consultor",
-            "observacao"
+            "data",
+            "observacao",
+            "status",
+            "prioridade",
+            "proximo_contato"
         ),
         show="headings"
     )
@@ -34,16 +38,24 @@ def abrir_lista():
     tabela.heading("interesse", text="Interesse")
     tabela.heading("origem", text="Origem")
     tabela.heading("consultor", text="Consultor")
+    tabela.heading("data", text="Data Cadastro")
     tabela.heading("observacao", text="Observação")
+    tabela.heading("status", text="Status")
+    tabela.heading("prioridade", text="Prioridade")
+    tabela.heading("proximo_contato", text="Próximo Contato")
 
 
     tabela.column("nome", width=120)
-    tabela.column("telefone", width=100)
-    tabela.column("email", width=150)
-    tabela.column("interesse", width=120)
-    tabela.column("origem", width=100)
-    tabela.column("consultor", width=120)
+    tabela.column("telefone", width=110)
+    tabela.column("email", width=180)
+    tabela.column("interesse", width=130)
+    tabela.column("origem", width=110)
+    tabela.column("consultor", width=130)
+    tabela.column("data", width=130)
     tabela.column("observacao", width=200)
+    tabela.column("status", width=110)
+    tabela.column("prioridade", width=110)
+    tabela.column("proximo_contato", width=140)
 
 
     tabela.pack(
@@ -69,7 +81,11 @@ def abrir_lista():
                     lead["interesse"],
                     lead["origem"],
                     lead["consultor"],
-                    lead["observacao"]
+                    lead.get("data", ""),
+                    lead.get("observacao", ""),
+                    lead.get("status", "Novo"),
+                    lead.get("prioridade", "Morno"),
+                    lead.get("proximo_contato", "")
                 )
             )
 
@@ -96,8 +112,13 @@ def abrir_lista():
                 "interesse": valores[3],
                 "origem": valores[4],
                 "consultor": valores[5],
-                "observacao": valores[6]
+                "data": valores[6],
+                "observacao": valores[7],
+                "status": valores[8],
+                "prioridade": valores[9],
+                "proximo_contato": valores[10],
             }
+    
 
 
 
@@ -114,7 +135,7 @@ def abrir_lista():
 
             janela_editar = tk.Toplevel()
             janela_editar.title("Editar Lead")
-            janela_editar.geometry("400x400")
+            janela_editar.geometry("400x600")
 
             campos = {}
 

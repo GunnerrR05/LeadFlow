@@ -41,4 +41,18 @@ def criar_campos(janela):
     campos["observacao"].pack()
 
 
+    tk.Label(janela, text="Status").pack()
+    campos["status"] = tk.Entry(janela)
+    campos["status"].pack()
+
+
+    tk.Label(janela, text="Prioridade").pack()
+    campos["prioridade"] = tk.Entry(janela)
+    campos["prioridade"].pack()
+
+
+    tk.Label(janela, text="Próximo contato").pack()
+    campos["proximo_contato"] = tk.Entry(janela)
+    campos["proximo_contato"].pack()
+
     return campos

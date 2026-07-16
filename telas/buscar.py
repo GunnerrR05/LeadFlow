@@ -66,7 +66,11 @@ def abrir_busca():
                 f"Interesse: {lead_encontrado['interesse']}\n"
                 f"Origem: {lead_encontrado['origem']}\n"
                 f"Consultor: {lead_encontrado['consultor']}\n"
-                f"Observação: {lead_encontrado['observacao']}"
+                f"Data cadastro: {lead_encontrado.get('data','')}\n"
+                f"Observação: {lead_encontrado['observacao']}\n"
+                f"Status: {lead_encontrado.get('status','Novo')}\n"
+                f"Prioridade: {lead_encontrado.get('prioridade','Morno')}\n"
+                f"Próximo contato: {lead_encontrado.get('proximo_contato','')}\n"
             )
 
             resultado.insert(
@@ -99,7 +103,7 @@ def abrir_busca():
             janela_editar = tk.Toplevel()
 
             janela_editar.title("Editar Lead")
-            janela_editar.geometry("300x400")
+            janela_editar.geometry("350x550")
 
 
             campos_edicao = {}
@@ -112,7 +116,10 @@ def abrir_busca():
                 "interesse",
                 "origem",
                 "consultor",
-                "observacao"
+                "observacao",
+                "status",
+                "prioridade",
+                "proximo_contato"
             ]:
 
                 tk.Label(

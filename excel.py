@@ -120,7 +120,7 @@ def pegar_leads():
 
         if nome is not None:
             lead = {
-                "nome": nome,
+                "nome": planilha[f"A{linha}"].value,
                 "telefone": planilha[f"B{linha}"].value,
                 "email": planilha[f"C{linha}"].value,
                 "interesse": planilha[f"D{linha}"].value,
@@ -128,7 +128,11 @@ def pegar_leads():
                 "consultor": planilha[f"F{linha}"].value,
                 "data": planilha[f"G{linha}"].value,
                 "observacao": planilha[f"H{linha}"].value,
-                "status": planilha[f"I{linha}"].value
+                "status": planilha[f"I{linha}"].value,
+                "historico": planilha[f"J{linha}"].value,
+                "proximo_contato": planilha[f"K{linha}"].value,
+                "ultima_interacao": planilha[f"L{linha}"].value,
+                "prioridade": planilha[f"M{linha}"].value
             }
 
         leads.append(lead)
@@ -153,8 +157,11 @@ def buscar_lead_por_telefone(telefone_busca):
                 "interesse": planilha[f"D{linha}"].value,
                 "origem": planilha[f"E{linha}"].value,
                 "consultor": planilha[f"F{linha}"].value,
+                "data": planilha[f"G{linha}"].value,
                 "observacao": planilha[f"H{linha}"].value,
-                "status": planilha[f"I{linha}"].value
+                "status": planilha[f"I{linha}"].value or "Novo",
+                "prioridade": planilha[f"M{linha}"].value or "Morno",
+                "proximo_contato": planilha[f"K{linha}"].value or ""
             }
 
             return lead
@@ -163,6 +170,7 @@ def buscar_lead_por_telefone(telefone_busca):
 
 
 def atualizar_lead(lead):
+
     arquivo = load_workbook("leads.xlsx")
     planilha = arquivo.active
 
@@ -174,12 +182,12 @@ def atualizar_lead(lead):
     planilha[f"D{linha}"] = lead.get("interesse", "")
     planilha[f"E{linha}"] = lead.get("origem", "")
     planilha[f"F{linha}"] = lead.get("consultor", "")
-    planilha[f"G{linha}"] = lead.get("observacao", "")
-    planilha[f"H{linha}"] = lead.get("status", "")
-    planilha[f"I{linha}"] = lead.get("prioridade", "")
-    planilha[f"J{linha}"] = lead.get("proximo_contato", "")
-    planilha[f"K{linha}"] = lead.get("ultima_interacao", "")
-    planilha[f"L{linha}"] = lead.get("data", "")
+    planilha[f"H{linha}"] = lead.get("observacao", "")
+    planilha[f"I{linha}"] = lead.get("status", "")
+    planilha[f"J{linha}"] = lead.get("historico", "")
+    planilha[f"K{linha}"] = lead.get("proximo_contato", "")
+    planilha[f"L{linha}"] = lead.get("ultima_interacao", "")
+    planilha[f"M{linha}"] = lead.get("prioridade", "")
 
     arquivo.save("leads.xlsx")
 
