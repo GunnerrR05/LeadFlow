@@ -1,113 +1,156 @@
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import ttk, messagebox
 
 from telas.cadastro import abrir_cadastro
-from telas.listar import abrir_lista
 from telas.buscar import abrir_busca
+from telas.listar import abrir_lista
 
-from componentes.campos import criar_campos
-from componentes.botoes import criar_botoes
 
-from servicos.leads import cadastrar_lead
-from servicos.leads import cadastrar_lead, atualizar_lead
+def centralizar_janela(janela, largura, altura):
+    janela.update_idletasks()
 
-from excel import (
-    salvar_lead,
-    pegar_leads, 
-    buscar_lead_por_telefone, 
-    atualizar_lead, 
-    excluir_lead
+    largura_tela = janela.winfo_screenwidth()
+    altura_tela = janela.winfo_screenheight()
+
+    posicao_x = (largura_tela - largura) // 2
+    posicao_y = (altura_tela - altura) // 2
+
+    janela.geometry(
+        f"{largura}x{altura}+{posicao_x}+{posicao_y}"
     )
 
-lead_selecionado = None
 
-janela = tk.Tk()
-janela.title("LeadFlow")
-janela.geometry("600x600")
+def iniciar_interface():
+    janela = tk.Tk()
 
+    janela.title("LeadFlow - Gerenciador de Leads")
+    centralizar_janela(janela, 500, 520)
 
-titulo = tk.Label(
-    janela,
-    text="Sistema de Leads",
-    font=("Arial", 20)
+    janela.resizable(False, False)
+
+    estilo = ttk.Style(janela)
+
+    if "clam" in estilo.theme_names():
+        estilo.theme_use("clam")
+
+    estilo.configure(
+        "Titulo.TLabel",
+        font=("Arial", 24, "bold")
     )
-titulo.pack()
 
-campos = criar_campos(janela)
+    estilo.configure(
+        "Subtitulo.TLabel",
+        font=("Arial", 11)
+    )
 
+    estilo.configure(
+        "Menu.TButton",
+        font=("Arial", 11),
+        padding=10
+    )
 
+    container = ttk.Frame(
+        janela,
+        padding=30
+    )
 
+    container.pack(
+        expand=True,
+        fill="both"
+    )
 
-######################################
+    titulo = ttk.Label(
+        container,
+        text="Sistema de Leads",
+        style="Titulo.TLabel"
+    )
 
+    titulo.pack(pady=(20, 5))
 
+    subtitulo = ttk.Label(
+        container,
+        text="Gerenciamento de contatos comerciais",
+        style="Subtitulo.TLabel"
+    )
 
+    subtitulo.pack(pady=(0, 30))
 
-#--------------------------------------#
+    botao_cadastrar = ttk.Button(
+        container,
+        text="Cadastrar Lead",
+        command=abrir_cadastro,
+        style="Menu.TButton",
+        width=30
+    )
 
+    botao_cadastrar.pack(pady=8)
 
-def atualizar():
+    botao_buscar = ttk.Button(
+        container,
+        text="Buscar Lead",
+        command=abrir_busca,
+        style="Menu.TButton",
+        width=30
+    )
 
-    global lead_selecionado
+    botao_buscar.pack(pady=8)
 
-    if lead_selecionado is not None:
+    botao_listar = ttk.Button(
+        container,
+        text="Listar Leads",
+        command=abrir_lista,
+        style="Menu.TButton",
+        width=30
+    )
 
-        atualizar_lead(
-            lead_selecionado,
-            campos
-        )
+    botao_listar.pack(pady=8)
 
-        messagebox.showinfo(
-            "Sucesso",
-            "Lead atualizado com sucesso!"
-        )
+    ttk.Separator(
+        container,
+        orient="horizontal"
+    ).pack(
+        fill="x",
+        pady=25
+    )
 
-
-
-#--------------------------------------#
-
-
-def limpar():
-    campos["nome"].delete(0, tk.END)
-    campos["telefone"].delete(0, tk.END)
-    campos["email"].delete(0, tk.END)
-    campos["interesse"].delete(0, tk.END)
-    campos["origem"].delete(0, tk.END)
-    campos["consultor"].delete(0, tk.END)
-    campos["observacao"].delete(0, tk.END)
-
-
-
-def excluir():
-    global lead_selecionado
-
-    if lead_selecionado is not None:
+    def fechar_programa():
         confirmacao = messagebox.askyesno(
-            "Confirmar exclusão",
-            "Tem certeza que deseja excluir este lead?"
+            "Fechar programa",
+            "Deseja realmente fechar o LeadFlow?",
+            parent=janela
         )
 
         if confirmacao:
-            excluir_lead(lead_selecionado["linha"])
-            
-            messagebox.showinfo(
-                "Sucesso",
-                "Lead excluído com sucesso!"
-            )
+            janela.destroy()
 
-            limpar()
-            lead_selecionado = None
+    botao_sair = ttk.Button(
+        container,
+        text="Sair",
+        command=fechar_programa,
+        style="Menu.TButton",
+        width=30
+    )
+
+    botao_sair.pack(pady=8)
+
+    rodape = ttk.Label(
+        container,
+        text="LeadFlow",
+        font=("Arial", 9)
+    )
+
+    rodape.pack(
+        side="bottom",
+        pady=10
+    )
+
+    janela.protocol(
+        "WM_DELETE_WINDOW",
+        fechar_programa
+    )
+
+    janela.mainloop()
 
 
-
-botoes = criar_botoes(
-    janela,
-    abrir_cadastro,
-    limpar,
-    abrir_lista,
-    abrir_busca,
-    campos
-)
-
-    
-janela.mainloop()
+if __name__ == "__main__":
+    iniciar_interface()

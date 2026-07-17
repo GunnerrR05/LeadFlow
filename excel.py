@@ -1,315 +1,706 @@
-from openpyxl import Workbook
-from openpyxl import load_workbook
-from datetime import datetime
+import os
+from datetime import date, datetime
+
+from openpyxl import Workbook, load_workbook
+
+
+ARQUIVO_LEADS = "leads.xlsx"
+
+CABECALHOS = [
+    "DATA DE CADASTRO",
+    "PRÓXIMO CONTATO",
+    "ÚLTIMA INTERAÇÃO",
+    "STATUS",
+    "TELEFONE",
+    "NOME",
+    "PRODUTO",
+    "CIDADE / UF",
+    "E-MAIL",
+    "APLICAÇÃO",
+    "ORIGEM",
+    "CONSULTOR",
+    "OBSERVAÇÃO",
+    "RESUMO",
+    "NOME NO WHATSAPP",
+]
+
+STATUS_VALIDOS = [
+    "EM ANDAMENTO",
+    "NEGOCIAÇÃO",
+    "DECLINADO",
+    "CONQUISTADO - SUPRIM",
+    "CONQUISTADO - EQUIP",
+    "FUTURA",
+    "CLIENTE ATIVO",
+]
+
+
+def _valor(campo):
+    """
+    Aceita tanto texto comum quanto objetos Entry e Combobox do Tkinter.
+    """
+
+    if hasattr(campo, "get") and callable(campo.get):
+        campo = campo.get()
+
+    if campo is None:
+        return ""
+
+    return str(campo).strip()
+
+
+def _abrir_planilha():
+    """
+    Abre a planilha. Caso não exista, cria automaticamente.
+    """
+
+    if not os.path.exists(ARQUIVO_LEADS):
+        criar_planilha()
+
+    arquivo = load_workbook(ARQUIVO_LEADS)
+    planilha = arquivo.active
+
+    return arquivo, planilha
+
+
+def _gerar_resumo(dados):
+    """
+    Formato:
+    NOME - TELEFONE - ORIGEM - PRODUTO
+    """
+
+    return (
+        f"{dados['nome']} - "
+        f"{dados['telefone']} - "
+        f"{dados['origem']} - "
+        f"{dados['produto']}"
+    )
+
+
+def _gerar_nome_whatsapp(dados):
+    """
+    Formato:
+    LEAD - NOME - PRODUTO - CIDADE / UF - ORIGEM
+    """
+
+    return (
+        f"LEAD - "
+        f"{dados['nome']} - "
+        f"{dados['produto']} - "
+        f"{dados['cidade_uf']} - "
+        f"{dados['origem']}"
+    )
+
+
+def _lead_da_linha(planilha, linha):
+    """
+    Transforma uma linha do Excel em um dicionário de lead.
+    """
+
+    return {
+        "linha": linha,
+        "data_cadastro": planilha[f"A{linha}"].value or "",
+        "proximo_contato": planilha[f"B{linha}"].value or "",
+        "ultima_interacao": planilha[f"C{linha}"].value or "",
+        "status": planilha[f"D{linha}"].value or "EM ANDAMENTO",
+        "telefone": planilha[f"E{linha}"].value or "",
+        "nome": planilha[f"F{linha}"].value or "",
+        "produto": planilha[f"G{linha}"].value or "",
+        "cidade_uf": planilha[f"H{linha}"].value or "",
+        "email": planilha[f"I{linha}"].value or "",
+        "aplicacao": planilha[f"J{linha}"].value or "",
+        "origem": planilha[f"K{linha}"].value or "",
+        "consultor": planilha[f"L{linha}"].value or "",
+        "observacao": planilha[f"M{linha}"].value or "",
+        "resumo": planilha[f"N{linha}"].value or "",
+        "whatsapp": planilha[f"O{linha}"].value or "",
+    }
+
 
 def criar_planilha():
+    """
+    Cria leads.xlsx somente quando o arquivo ainda não existe.
+    Não sobrescreve uma planilha existente.
+    """
+
+    if os.path.exists(ARQUIVO_LEADS):
+        return False
+
     workbook = Workbook()
     planilha = workbook.active
-    
-    
-    planilha['A1'] = 'NOME'
-    planilha['B1'] = 'TELEFONE'
-    planilha['C1'] = 'E-MAIL'
-    planilha['D1'] = 'INTERESSE'
-    planilha['E1'] = 'ORIGEM'
-    planilha['F1'] = 'CONSULTOR'
-    planilha['G1'] = 'DATA DE CADASTRO'
-    planilha['H1'] = 'OBSERVAÇÕES'
-    planilha["I1"] = "STATUS"
-    planilha['J1'] = 'HISTÓRICO'
-    planilha['K1'] = 'PROXIMO CONTATO'
-    planilha['L1'] = 'ULTIMA INTERACAO'
-    planilha['M1'] = 'PRIORIDADE'
+    planilha.title = "Leads"
 
-    
-    
-    workbook.save('leads.xlsx')
+    for coluna, cabecalho in enumerate(CABECALHOS, start=1):
+        planilha.cell(
+            row=1,
+            column=coluna,
+            value=cabecalho
+        )
+
+    larguras = {
+        "A": 20,
+        "B": 18,
+        "C": 20,
+        "D": 24,
+        "E": 16,
+        "F": 24,
+        "G": 24,
+        "H": 18,
+        "I": 28,
+        "J": 24,
+        "K": 18,
+        "L": 18,
+        "M": 35,
+        "N": 55,
+        "O": 65,
+    }
+
+    for coluna, largura in larguras.items():
+        planilha.column_dimensions[coluna].width = largura
+
+    planilha.freeze_panes = "A2"
+    planilha.auto_filter.ref = "A1:O1"
+
+    workbook.save(ARQUIVO_LEADS)
+
+    return True
+
 
 def salvar_lead(lead):
-    arquivo = load_workbook('leads.xlsx')
-    planilha = arquivo.active
+    """
+    Salva um novo lead na próxima linha vazia da planilha.
+    """
+
+    arquivo, planilha = _abrir_planilha()
 
     linha_vazia = planilha.max_row + 1
-    agora = datetime.now()
-    data_formatada = agora.strftime("%d/%m/%Y %H:%M")
 
-    planilha[f"A{linha_vazia}"] = lead["nome"]
-    planilha[f"B{linha_vazia}"] = lead["telefone"]
-    planilha[f"C{linha_vazia}"] = lead["email"]
-    planilha[f"D{linha_vazia}"] = lead["interesse"]
-    planilha[f"E{linha_vazia}"] = lead["origem"]
-    planilha[f"F{linha_vazia}"] = lead["consultor"]
-    planilha[f"G{linha_vazia}"] = data_formatada
-    planilha[f"H{linha_vazia}"] = lead["observacao"]
-    planilha[f"I{linha_vazia}"] = lead["status"]
-    planilha[f"J{linha_vazia}"] = (
-        f"[{data_formatada}] Criado - {lead['status']}"
+    dados = {
+        "proximo_contato": _valor(
+            lead.get("proximo_contato", "")
+        ),
+        "ultima_interacao": _valor(
+            lead.get("ultima_interacao", "")
+        ),
+        "status": (
+            _valor(lead.get("status", ""))
+            or "EM ANDAMENTO"
+        ),
+        "telefone": _valor(
+            lead.get("telefone", "")
+        ),
+        "nome": _valor(
+            lead.get("nome", "")
+        ),
+        "produto": _valor(
+            lead.get(
+                "produto",
+                lead.get("interesse", "")
+            )
+        ),
+        "cidade_uf": _valor(
+            lead.get("cidade_uf", "")
+        ),
+        "email": _valor(
+            lead.get("email", "")
+        ),
+        "aplicacao": _valor(
+            lead.get("aplicacao", "")
+        ),
+        "origem": _valor(
+            lead.get("origem", "")
+        ),
+        "consultor": _valor(
+            lead.get("consultor", "")
+        ),
+        "observacao": _valor(
+            lead.get("observacao", "")
+        ),
+    }
+
+    data_cadastro = datetime.now().strftime(
+        "%d/%m/%Y %H:%M"
     )
-    planilha[f'K{linha_vazia}'] = lead["proximo_contato"]
-    planilha[f'L{linha_vazia}'] = lead["ultima_interacao"]
-    planilha[f'M{linha_vazia}'] = lead["prioridade"]
-    
 
-    arquivo.save('leads.xlsx')
+    resumo = _gerar_resumo(dados)
+    nome_whatsapp = _gerar_nome_whatsapp(dados)
 
+    valores = [
+        data_cadastro,
+        dados["proximo_contato"],
+        dados["ultima_interacao"],
+        dados["status"],
+        dados["telefone"],
+        dados["nome"],
+        dados["produto"],
+        dados["cidade_uf"],
+        dados["email"],
+        dados["aplicacao"],
+        dados["origem"],
+        dados["consultor"],
+        dados["observacao"],
+        resumo,
+        nome_whatsapp,
+    ]
 
-def listar_leads():
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    for coluna, valor in enumerate(valores, start=1):
+        planilha.cell(
+            row=linha_vazia,
+            column=coluna,
+            value=valor
+        )
 
-    print("\n===== LEADS CADASTRADOS =====")
+    arquivo.save(ARQUIVO_LEADS)
 
-    for linha in range(2, planilha.max_row + 1):
-        nome = planilha[f"A{linha}"].value
-        telefone = planilha[f"B{linha}"].value
-        email = planilha[f"C{linha}"].value
-        interesse = planilha[f"D{linha}"].value
-        origem = planilha[f"E{linha}"].value
-        consultor = planilha[f"F{linha}"].value
-        data = planilha[f"G{linha}"].value
-        observacao = planilha[f"H{linha}"].value
-        status = planilha[f"I{linha}"].value
-        historico = planilha[f"J{linha}"].value
-        prioridade = planilha[f"M{linha}"].value
-        proximo_contato = planilha[f"K{linha}"].value
-        ultima_interacao = planilha[f"L{linha}"].value
+    return linha_vazia
 
-        if status is None:
-            status = "Novo"
-
-        print(f"\nLead {linha - 1}")
-        print(f"Nome: {nome}")
-        print(f"Telefone: {telefone}")
-        print(f"E-mail: {email}")
-        print(f"Interesse: {interesse}")
-        print(f"Origem: {origem}")
-        print(f"Consultor: {consultor}")
-        print(f"Data: {data}")
-        print(f"Observações: {observacao}")
-        print(f"Status: {status}")
-        print(f"Histórico: {historico}")
-        print(f"Prioridade: {prioridade}")
-        print(f"Próximo contato: {proximo_contato}")
-        print(f"Última interação: {ultima_interacao}")
-        
-        
-        print("-" * 30)
-
-
-def buscar_lead_por_nome(nome_busca):
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
-
-    for linha in range(2, planilha.max_row + 1):
-        nome = planilha[f"A{linha}"].value
-        if nome == nome_busca:
-            return linha
-        
-    return None
-        
 
 def pegar_leads():
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    """
+    Retorna todos os leads da planilha em uma lista.
+    """
+
+    arquivo, planilha = _abrir_planilha()
 
     leads = []
 
     for linha in range(2, planilha.max_row + 1):
 
-        nome = planilha[f"A{linha}"].value
+        telefone = planilha[f"E{linha}"].value
+        nome = planilha[f"F{linha}"].value
 
-        if nome is not None:
-            lead = {
-                "nome": planilha[f"A{linha}"].value,
-                "telefone": planilha[f"B{linha}"].value,
-                "email": planilha[f"C{linha}"].value,
-                "interesse": planilha[f"D{linha}"].value,
-                "origem": planilha[f"E{linha}"].value,
-                "consultor": planilha[f"F{linha}"].value,
-                "data": planilha[f"G{linha}"].value,
-                "observacao": planilha[f"H{linha}"].value,
-                "status": planilha[f"I{linha}"].value,
-                "historico": planilha[f"J{linha}"].value,
-                "proximo_contato": planilha[f"K{linha}"].value,
-                "ultima_interacao": planilha[f"L{linha}"].value,
-                "prioridade": planilha[f"M{linha}"].value
-            }
+        if telefone is None and nome is None:
+            continue
+
+        lead = _lead_da_linha(
+            planilha,
+            linha
+        )
 
         leads.append(lead)
 
     return leads
 
 
-def buscar_lead_por_telefone(telefone_busca):
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+def listar_leads():
+    """
+    Mantida para compatibilidade com o main.py antigo.
+    A interface gráfica utiliza pegar_leads().
+    """
+
+    leads = pegar_leads()
+
+    for numero, lead in enumerate(leads, start=1):
+
+        print(f"\nLEAD {numero}")
+
+        print(
+            f"Data de cadastro: "
+            f"{lead['data_cadastro']}"
+        )
+
+        print(
+            f"Próximo contato: "
+            f"{lead['proximo_contato']}"
+        )
+
+        print(
+            f"Última interação: "
+            f"{lead['ultima_interacao']}"
+        )
+
+        print(f"Status: {lead['status']}")
+        print(f"Telefone: {lead['telefone']}")
+        print(f"Nome: {lead['nome']}")
+        print(f"Produto: {lead['produto']}")
+        print(f"Cidade / UF: {lead['cidade_uf']}")
+        print(f"E-mail: {lead['email']}")
+        print(f"Aplicação: {lead['aplicacao']}")
+        print(f"Origem: {lead['origem']}")
+        print(f"Consultor: {lead['consultor']}")
+        print(f"Observação: {lead['observacao']}")
+        print(f"Resumo: {lead['resumo']}")
+
+        print(
+            f"Nome no WhatsApp: "
+            f"{lead['whatsapp']}"
+        )
+
+    return leads
+
+
+def buscar_lead_por_nome(nome_busca):
+    """
+    Busca pelo nome e retorna o número da linha do Excel.
+    """
+
+    arquivo, planilha = _abrir_planilha()
+
+    nome_procurado = _valor(
+        nome_busca
+    ).casefold()
 
     for linha in range(2, planilha.max_row + 1):
 
-        telefone = planilha[f"B{linha}"].value
+        nome = _valor(
+            planilha[f"F{linha}"].value
+        )
 
-        if telefone == telefone_busca:
-            lead = {
-                "linha": linha,
-                "nome": planilha[f"A{linha}"].value,
-                "telefone": telefone,
-                "email": planilha[f"C{linha}"].value,
-                "interesse": planilha[f"D{linha}"].value,
-                "origem": planilha[f"E{linha}"].value,
-                "consultor": planilha[f"F{linha}"].value,
-                "data": planilha[f"G{linha}"].value,
-                "observacao": planilha[f"H{linha}"].value,
-                "status": planilha[f"I{linha}"].value or "Novo",
-                "prioridade": planilha[f"M{linha}"].value or "Morno",
-                "proximo_contato": planilha[f"K{linha}"].value or ""
-            }
+        if nome.casefold() == nome_procurado:
+            return linha
 
-            return lead
+    return None
+
+
+def buscar_lead_por_telefone(telefone_busca):
+    """
+    Busca um lead pelo telefone e retorna o dicionário completo.
+    """
+
+    arquivo, planilha = _abrir_planilha()
+
+    telefone_procurado = _valor(
+        telefone_busca
+    )
+
+    for linha in range(2, planilha.max_row + 1):
+
+        telefone = _valor(
+            planilha[f"E{linha}"].value
+        )
+
+        if telefone == telefone_procurado:
+
+            return _lead_da_linha(
+                planilha,
+                linha
+            )
 
     return None
 
 
 def atualizar_lead(lead):
+    """
+    Atualiza um lead existente pela chave 'linha'.
+    O resumo e o nome do WhatsApp são recriados automaticamente.
+    """
 
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    arquivo, planilha = _abrir_planilha()
 
-    linha = lead["linha"]
+    if "linha" not in lead:
+        raise KeyError(
+            "O lead precisa possuir a chave 'linha'."
+        )
 
-    planilha[f"A{linha}"] = lead.get("nome", "")
-    planilha[f"B{linha}"] = lead.get("telefone", "")
-    planilha[f"C{linha}"] = lead.get("email", "")
-    planilha[f"D{linha}"] = lead.get("interesse", "")
-    planilha[f"E{linha}"] = lead.get("origem", "")
-    planilha[f"F{linha}"] = lead.get("consultor", "")
-    planilha[f"H{linha}"] = lead.get("observacao", "")
-    planilha[f"I{linha}"] = lead.get("status", "")
-    planilha[f"J{linha}"] = lead.get("historico", "")
-    planilha[f"K{linha}"] = lead.get("proximo_contato", "")
-    planilha[f"L{linha}"] = lead.get("ultima_interacao", "")
-    planilha[f"M{linha}"] = lead.get("prioridade", "")
+    linha = int(lead["linha"])
 
-    arquivo.save("leads.xlsx")
+    if linha < 2 or linha > planilha.max_row:
+        raise ValueError(
+            "Linha do lead inválida."
+        )
+
+    atual = _lead_da_linha(
+        planilha,
+        linha
+    )
+
+    dados = {
+        "data_cadastro": (
+            _valor(
+                lead.get(
+                    "data_cadastro",
+                    lead.get(
+                        "data",
+                        atual["data_cadastro"]
+                    )
+                )
+            )
+            or _valor(atual["data_cadastro"])
+        ),
+
+        "proximo_contato": _valor(
+            lead.get(
+                "proximo_contato",
+                atual["proximo_contato"]
+            )
+        ),
+
+        "ultima_interacao": _valor(
+            lead.get(
+                "ultima_interacao",
+                atual["ultima_interacao"]
+            )
+        ),
+
+        "status": (
+            _valor(
+                lead.get(
+                    "status",
+                    atual["status"]
+                )
+            )
+            or "EM ANDAMENTO"
+        ),
+
+        "telefone": _valor(
+            lead.get(
+                "telefone",
+                atual["telefone"]
+            )
+        ),
+
+        "nome": _valor(
+            lead.get(
+                "nome",
+                atual["nome"]
+            )
+        ),
+
+        "produto": _valor(
+            lead.get(
+                "produto",
+                lead.get(
+                    "interesse",
+                    atual["produto"]
+                )
+            )
+        ),
+
+        "cidade_uf": _valor(
+            lead.get(
+                "cidade_uf",
+                atual["cidade_uf"]
+            )
+        ),
+
+        "email": _valor(
+            lead.get(
+                "email",
+                atual["email"]
+            )
+        ),
+
+        "aplicacao": _valor(
+            lead.get(
+                "aplicacao",
+                atual["aplicacao"]
+            )
+        ),
+
+        "origem": _valor(
+            lead.get(
+                "origem",
+                atual["origem"]
+            )
+        ),
+
+        "consultor": _valor(
+            lead.get(
+                "consultor",
+                atual["consultor"]
+            )
+        ),
+
+        "observacao": _valor(
+            lead.get(
+                "observacao",
+                atual["observacao"]
+            )
+        ),
+    }
+
+    resumo = _gerar_resumo(dados)
+    nome_whatsapp = _gerar_nome_whatsapp(dados)
+
+    valores = [
+        dados["data_cadastro"],
+        dados["proximo_contato"],
+        dados["ultima_interacao"],
+        dados["status"],
+        dados["telefone"],
+        dados["nome"],
+        dados["produto"],
+        dados["cidade_uf"],
+        dados["email"],
+        dados["aplicacao"],
+        dados["origem"],
+        dados["consultor"],
+        dados["observacao"],
+        resumo,
+        nome_whatsapp,
+    ]
+
+    for coluna, valor in enumerate(valores, start=1):
+
+        planilha.cell(
+            row=linha,
+            column=coluna,
+            value=valor
+        )
+
+    arquivo.save(ARQUIVO_LEADS)
+
+    dados["linha"] = linha
+    dados["resumo"] = resumo
+    dados["whatsapp"] = nome_whatsapp
+
+    return dados
 
 
 def excluir_lead(linha):
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    """
+    Exclui uma linha do Excel.
+    """
+
+    arquivo, planilha = _abrir_planilha()
+
+    linha = int(linha)
+
+    if linha < 2 or linha > planilha.max_row:
+        raise ValueError(
+            "Linha do lead inválida."
+        )
 
     planilha.delete_rows(linha)
 
-    arquivo.save("leads.xlsx")
+    arquivo.save(ARQUIVO_LEADS)
 
+    return True
 
 
 def atualizar_status(telefone, novo_status):
+    """
+    Atualiza o status pelo telefone.
+    Também registra o momento na coluna Última Interação.
+    """
 
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    arquivo, planilha = _abrir_planilha()
 
-    agora = datetime.now().strftime("%d/%m/%Y %H:%M")
+    telefone_procurado = _valor(telefone)
+    status_novo = _valor(novo_status)
 
     for linha in range(2, planilha.max_row + 1):
 
-        if planilha[f"B{linha}"].value == telefone:
+        telefone_planilha = _valor(
+            planilha[f"E{linha}"].value
+        )
 
-            status_antigo = planilha[f"I{linha}"].value
+        if telefone_planilha == telefone_procurado:
 
-            planilha[f"I{linha}"] = novo_status
+            planilha[f"D{linha}"] = status_novo
 
-            historico_atual = planilha[f"J{linha}"].value
-
-            novo_historico = (
-                f"{historico_atual}\n"
-                f"[{agora}] {status_antigo} -> {novo_status}"
+            planilha[f"C{linha}"] = (
+                datetime.now().strftime(
+                    "%d/%m/%Y %H:%M"
+                )
             )
 
-            planilha[f"J{linha}"] = novo_historico
-
-            arquivo.save("leads.xlsx")
+            arquivo.save(ARQUIVO_LEADS)
 
             return True
 
     return False
 
 
-
 def dashboard():
+    """
+    Mostra a quantidade de leads por status.
+    """
 
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    leads = pegar_leads()
 
-    total = 0
-
-    status_contagem = {
-        "Novo": 0,
-        "Contato realizado": 0,
-        "Proposta enviada": 0,
-        "Fechado": 0,
-        "Perdido": 0
+    contagem = {
+        status: 0
+        for status in STATUS_VALIDOS
     }
 
+    for lead in leads:
 
-    for linha in range(2, planilha.max_row + 1):
-
-        nome = planilha[f"A{linha}"].value
-        status = planilha[f"I{linha}"].value
-
-        if status is None:
-            status = "Novo"
-
-        if nome:
-
-            total += 1
-
-            if status in status_contagem:
-                status_contagem[status] += 1
-
-
-    print("\n===== DASHBOARD =====")
-
-    print(f"\nTotal de leads: {total}\n")
-
-
-    for status, quantidade in status_contagem.items():
-
-        print(f"{status}: {quantidade}")
-
-
-    if total > 0:
-
-        conversao = (
-            status_contagem["Fechado"]
-            / total
-        ) * 100
-
-        print(
-            f"\nTaxa de conversão: {conversao:.1f}%"
+        status = (
+            _valor(lead.get("status"))
+            or "EM ANDAMENTO"
         )
 
+        if status not in contagem:
+            contagem[status] = 0
 
-    print("====================\n")    
+        contagem[status] += 1
 
-    print("\n===== FUNIL DE VENDAS =====")
+    total = len(leads)
 
-    etapas = {
-        "Novo": status_contagem["Novo"],
-        "Contato realizado": status_contagem["Contato realizado"],
-        "Proposta enviada": status_contagem["Proposta enviada"],
-        "Fechado": status_contagem["Fechado"],
-        "Perdido": status_contagem["Perdido"]
+    conquistados = (
+        contagem.get(
+            "CONQUISTADO - SUPRIM",
+            0
+        )
+        +
+        contagem.get(
+            "CONQUISTADO - EQUIP",
+            0
+        )
+    )
+
+    if total > 0:
+        taxa_conversao = (
+            conquistados / total
+        ) * 100
+    else:
+        taxa_conversao = 0
+
+    print("\n===== DASHBOARD =====")
+    print(f"Total de leads: {total}")
+
+    for status, quantidade in contagem.items():
+        print(f"{status}: {quantidade}")
+
+    print(
+        f"Taxa de conversão: "
+        f"{taxa_conversao:.1f}%"
+    )
+
+    return {
+        "total": total,
+        "status": contagem,
+        "taxa_conversao": taxa_conversao,
     }
 
-    for nome, quantidade in etapas.items():
-        barra = "█" * quantidade
-        print(f"{nome:<18} {barra} {quantidade}")
 
+def _converter_data_contato(valor):
+    """
+    Converte o próximo contato para uma data Python.
+    """
+
+    if isinstance(valor, datetime):
+        return valor.date()
+
+    if isinstance(valor, date):
+        return valor
+
+    texto = _valor(valor)
+
+    formatos = [
+        "%d/%m/%Y",
+        "%d/%m/%Y %H:%M",
+    ]
+
+    for formato in formatos:
+
+        try:
+            return datetime.strptime(
+                texto,
+                formato
+            ).date()
+
+        except ValueError:
+            continue
+
+    return None
 
 
 def listar_followups():
-
-    arquivo = load_workbook("leads.xlsx")
-    planilha = arquivo.active
+    """
+    Separa os próximos contatos em atrasados, hoje e futuros.
+    """
 
     hoje = datetime.now().date()
 
@@ -317,88 +708,113 @@ def listar_followups():
     hoje_lista = []
     proximos = []
 
-    def peso_prioridade(lead):
-        ordem = {
-            "Quente": 1,
-            "Morno": 2,
-            "Frio": 3
-        }
+    for lead in pegar_leads():
 
-        return ordem.get(
-            lead["prioridade"],
-            4
+        data_contato = _converter_data_contato(
+            lead["proximo_contato"]
         )
 
-    for linha in range(2, planilha.max_row + 1):
+        if data_contato is None:
+            continue
 
-        nome = planilha[f"A{linha}"].value
-        telefone = planilha[f"B{linha}"].value
-        status = planilha[f"I{linha}"].value
-        prioridade = planilha[f"M{linha}"].value
-        contato = planilha[f"K{linha}"].value
+        item = lead.copy()
 
-        if contato:
+        item["_data_contato"] = data_contato
 
-            try:
-                data_contato = datetime.strptime(
-                    contato,
-                    "%d/%m/%Y"
-                ).date()
+        if data_contato < hoje:
+            atrasados.append(item)
 
-                lead = {
-                    "nome": nome,
-                    "telefone": telefone,
-                    "status": status,
-                    "prioridade": prioridade,
-                    "data": contato
-                }
+        elif data_contato == hoje:
+            hoje_lista.append(item)
 
-                if data_contato < hoje:
-                    atrasados.append(lead)
+        else:
+            proximos.append(item)
 
-                elif data_contato == hoje:
-                    hoje_lista.append(lead)
+    def chave_ordenacao(item):
 
-                else:
-                    proximos.append(lead)
+        return (
+            item["_data_contato"],
+            _valor(item["nome"]).casefold()
+        )
 
-            except:
-                pass
+    atrasados.sort(
+        key=chave_ordenacao
+    )
 
+    hoje_lista.sort(
+        key=chave_ordenacao
+    )
 
-    atrasados.sort(key=peso_prioridade)
-    hoje_lista.sort(key=peso_prioridade)
-    proximos.sort(key=peso_prioridade)
+    proximos.sort(
+        key=chave_ordenacao
+    )
 
+    def mostrar_grupo(titulo, grupo):
+
+        print(f"\n{titulo}")
+
+        for lead in grupo:
+
+            print("-" * 25)
+            print(f"Nome: {lead['nome']}")
+            print(f"Telefone: {lead['telefone']}")
+            print(f"Status: {lead['status']}")
+
+            print(
+                f"Próximo contato: "
+                f"{lead['proximo_contato']}"
+            )
 
     print("\n===== FOLLOW-UPS =====")
 
+    mostrar_grupo(
+        "ATRASADOS",
+        atrasados
+    )
 
-    print("\n🔴 ATRASADOS")
-    for lead in atrasados:
-        print("----------------")
-        print(f"Nome: {lead['nome']}")
-        print(f"Telefone: {lead['telefone']}")
-        print(f"Status: {lead['status']}")
-        print(f"Prioridade: {lead['prioridade']}")
-        print(f"Contato: {lead['data']}")
+    mostrar_grupo(
+        "HOJE",
+        hoje_lista
+    )
+
+    mostrar_grupo(
+        "PRÓXIMOS",
+        proximos
+    )
+
+    for grupo in (
+        atrasados,
+        hoje_lista,
+        proximos
+    ):
+
+        for item in grupo:
+            item.pop(
+                "_data_contato",
+                None
+            )
+
+    return {
+        "atrasados": atrasados,
+        "hoje": hoje_lista,
+        "proximos": proximos,
+    }
 
 
-    print("\n🟡 HOJE")
-    for lead in hoje_lista:
-        print("----------------")
-        print(f"Nome: {lead['nome']}")
-        print(f"Telefone: {lead['telefone']}")
-        print(f"Status: {lead['status']}")
-        print(f"Prioridade: {lead['prioridade']}")
-        print(f"Contato: {lead['data']}")
+if __name__ == "__main__":
 
+    criado = criar_planilha()
 
-    print("\n🟢 PRÓXIMOS")
-    for lead in proximos:
-        print("----------------")
-        print(f"Nome: {lead['nome']}")
-        print(f"Telefone: {lead['telefone']}")
-        print(f"Status: {lead['status']}")
-        print(f"Prioridade: {lead['prioridade']}")
-        print(f"Contato: {lead['data']}")
+    if criado:
+
+        print(
+            "Planilha leads.xlsx "
+            "criada com sucesso."
+        )
+
+    else:
+
+        print(
+            "A planilha leads.xlsx já existe "
+            "e não foi sobrescrita."
+        )
