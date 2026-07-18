@@ -40,6 +40,52 @@ def _converter_para_texto(valor):
 
     return str(valor).strip()
 
+def _normalizar_telefone(valor):
+    """
+    Remove espaços, parênteses, hífens e outros caracteres.
+    Mantém apenas os números.
+    """
+
+    texto = _converter_para_texto(valor)
+
+    return "".join(
+        caractere
+        for caractere in texto
+        if caractere.isdigit()
+    )
+
+def _validar_data(valor, nome_campo, formatos):
+    """
+    Valida uma data usando os formatos permitidos.
+    Campo vazio continua permitido.
+    """
+
+    if not valor:
+        return
+
+    for formato in formatos:
+        try:
+            datetime.strptime(valor, formato)
+            return
+
+        except ValueError:
+            continue
+
+    formatos_legiveis = " ou ".join(
+        formato
+        .replace("%d", "DD")
+        .replace("%m", "MM")
+        .replace("%Y", "AAAA")
+        .replace("%H", "HH")
+        .replace("%M", "MM")
+        for formato in formatos
+    )
+
+    raise ValueError(
+        f"{nome_campo} inválido. "
+        f"Use o formato {formatos_legiveis}."
+    )
+
 
 def _preparar_lead(campos):
     """
@@ -66,27 +112,66 @@ def _preparar_lead(campos):
 
 def _validar_lead(lead):
     """
-    Valida os campos obrigatórios.
+    Valida os campos obrigatórios e as datas.
     """
 
     if not lead["nome"]:
-        raise ValueError("O nome do lead é obrigatório.")
+        raise ValueError(
+            "O nome do lead é obrigatório."
+        )
 
     if not lead["telefone"]:
-        raise ValueError("O telefone do lead é obrigatório.")
+        raise ValueError(
+            "O telefone do lead é obrigatório."
+        )
 
     if not lead["produto"]:
-        raise ValueError("O produto é obrigatório.")
+        raise ValueError(
+            "O produto é obrigatório."
+        )
+
+    _validar_data(
+        lead["proximo_contato"],
+        "Próximo contato",
+        (
+            "%d/%m/%Y",
+        )
+    )
+
+    _validar_data(
+        lead["ultima_interacao"],
+        "Última interação",
+        (
+            "%d/%m/%Y",
+            "%d/%m/%Y %H:%M",
+        )
+    )
 
 
 def cadastrar_lead(campos):
     """
     Prepara, valida e salva um novo lead.
+    Impede telefones duplicados.
     """
 
     lead = _preparar_lead(campos)
 
     _validar_lead(lead)
+
+    telefone_novo = _normalizar_telefone(
+        lead["telefone"]
+    )
+
+    for lead_existente in pegar_leads():
+
+        telefone_existente = _normalizar_telefone(
+            lead_existente.get("telefone", "")
+        )
+
+        if telefone_existente == telefone_novo:
+            raise ValueError(
+                "Já existe um lead cadastrado com esse telefone."
+            )
 
     linha = salvar_lead(lead)
 
@@ -105,20 +190,31 @@ def listar_leads():
 
 def buscar_lead(telefone):
     """
-    Busca um lead pelo telefone.
+    Busca um lead pelo telefone, ignorando formatação.
     """
 
-    telefone = _converter_para_texto(telefone)
+    telefone_procurado = _normalizar_telefone(
+        telefone
+    )
 
-    if not telefone:
+    if not telefone_procurado:
         return None
 
-    return buscar_lead_por_telefone(telefone)
+    for lead in pegar_leads():
+
+        telefone_lead = _normalizar_telefone(
+            lead.get("telefone", "")
+        )
+
+        if telefone_lead == telefone_procurado:
+            return lead
+
+    return None
 
 
 def atualizar_lead(lead):
     """
-    Atualiza um lead já existente.
+    Atualiza um lead existente e impede telefone duplicado.
     """
 
     if not isinstance(lead, dict):
@@ -131,18 +227,45 @@ def atualizar_lead(lead):
             "O lead precisa possuir a informação da linha."
         )
 
-    lead_atualizado = _preparar_lead(lead)
+    linha_atual = int(lead["linha"])
 
-    lead_atualizado["linha"] = int(lead["linha"])
+    lead_atualizado = _preparar_lead(lead)
+    lead_atualizado["linha"] = linha_atual
 
     if "data_cadastro" in lead:
-        lead_atualizado["data_cadastro"] = _converter_para_texto(
-            lead["data_cadastro"]
+        lead_atualizado["data_cadastro"] = (
+            _converter_para_texto(
+                lead["data_cadastro"]
+            )
         )
 
     _validar_lead(lead_atualizado)
 
-    return atualizar_lead_excel(lead_atualizado)
+    telefone_novo = _normalizar_telefone(
+        lead_atualizado["telefone"]
+    )
+
+    for lead_existente in pegar_leads():
+
+        linha_existente = int(
+            lead_existente["linha"]
+        )
+
+        telefone_existente = _normalizar_telefone(
+            lead_existente.get("telefone", "")
+        )
+
+        if (
+            linha_existente != linha_atual
+            and telefone_existente == telefone_novo
+        ):
+            raise ValueError(
+                "Já existe outro lead cadastrado com esse telefone."
+            )
+
+    return atualizar_lead_excel(
+        lead_atualizado
+    )
 
 
 def excluir_lead(lead):

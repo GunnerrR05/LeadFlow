@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from componentes.campos import mascara_telefone
+
 from servicos.leads import (
     buscar_lead,
     atualizar_lead,
@@ -63,6 +65,11 @@ def abrir_busca():
     campo_telefone.pack(
         side="left",
         padx=(0, 8)
+    )
+
+    campo_telefone.bind(
+        "<KeyRelease>",
+        mascara_telefone
     )
 
     resultado = tk.Text(
@@ -302,6 +309,12 @@ def abrir_busca():
                 padx=5,
                 pady=5
             )
+
+            if chave == "telefone":
+                campo.bind(
+                    "<KeyRelease>",
+                    mascara_telefone
+                )
 
             campos_edicao[chave] = campo
 

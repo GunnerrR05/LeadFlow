@@ -34,6 +34,108 @@ CAMPOS_CADASTRO = [
     ("Observação", "observacao"),
 ]
 
+def _mascara_data(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:8]
+
+    texto = numeros
+
+    if len(numeros) > 2:
+        texto = f"{numeros[:2]}/{numeros[2:]}"
+
+    if len(numeros) > 4:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:]}"
+        )
+
+    campo.delete(0, tk.END)
+    campo.insert(0, texto)
+
+
+def _mascara_data_hora(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:12]
+
+    texto = numeros
+
+    if len(numeros) > 2:
+        texto = f"{numeros[:2]}/{numeros[2:]}"
+
+    if len(numeros) > 4:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:]}"
+        )
+
+    if len(numeros) > 8:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:8]} "
+            f"{numeros[8:]}"
+        )
+
+    if len(numeros) > 10:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:8]} "
+            f"{numeros[8:10]}:"
+            f"{numeros[10:]}"
+        )
+
+    campo.delete(0, tk.END)
+    campo.insert(0, texto)
+
+
+def mascara_telefone(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:11]
+
+    if len(numeros) <= 2:
+        texto = f"({numeros}"
+
+    elif len(numeros) <= 6:
+        texto = (
+            f"({numeros[:2]}) "
+            f"{numeros[2:]}"
+        )
+
+    elif len(numeros) <= 10:
+        texto = (
+            f"({numeros[:2]}) "
+            f"{numeros[2:6]}-"
+            f"{numeros[6:]}"
+        )
+
+    else:
+        texto = (
+            f"({numeros[:2]}) "
+            f"{numeros[2:7]}-"
+            f"{numeros[7:]}"
+        )
+
+    campo.delete(0, tk.END)
+    campo.insert(0, texto)
+
 
 def criar_campos(janela):
     """
@@ -120,6 +222,24 @@ def criar_campos(janela):
             sticky="ew",
             pady=6
         )
+
+        if chave == "telefone":
+            campo.bind(
+                "<KeyRelease>",
+                mascara_telefone
+            )
+
+        elif chave == "proximo_contato":
+            campo.bind(
+                "<KeyRelease>",
+                _mascara_data
+            )
+
+        elif chave == "ultima_interacao":
+            campo.bind(
+                "<KeyRelease>",
+                _mascara_data_hora
+            )
 
         campos[chave] = campo
 

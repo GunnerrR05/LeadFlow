@@ -1,11 +1,15 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
+from componentes.campos import mascara_telefone
+
 from servicos.leads import (
     listar_leads,
     atualizar_lead,
     excluir_lead,
 )
+
+from datetime import datetime
 
 
 STATUS = [
@@ -110,6 +114,57 @@ def abrir_lista():
         font=("Arial", 18, "bold")
     ).pack(pady=(0, 10))
 
+    frame_filtros = ttk.Frame(container)
+
+    frame_filtros.pack(
+        fill="x",
+        pady=(0, 10)
+    )
+
+
+    ttk.Label(
+        frame_filtros,
+        text="Pesquisar:"
+    ).pack(
+        side="left",
+        padx=(0, 5)
+    )
+
+
+    campo_pesquisa = ttk.Entry(
+        frame_filtros,
+        width=35
+    )
+
+    campo_pesquisa.pack(
+        side="left",
+        padx=(0, 15)
+    )
+
+
+    ttk.Label(
+        frame_filtros,
+        text="Status:"
+    ).pack(
+        side="left",
+        padx=(0, 5)
+    )
+
+
+    filtro_status = ttk.Combobox(
+        frame_filtros,
+        values=["TODOS"] + STATUS,
+        state="readonly",
+        width=24
+    )
+
+    filtro_status.set("TODOS")
+
+    filtro_status.pack(
+        side="left",
+        padx=(0, 10)
+    )
+
     frame_tabela = ttk.Frame(container)
     frame_tabela.pack(
         expand=True,
@@ -188,31 +243,15 @@ def abrir_lista():
     frame_botoes = ttk.Frame(container)
     frame_botoes.pack(pady=12)
 
-    def carregar_tabela():
+    def preencher_tabela(lista_leads):
         nonlocal lead_selecionado
-        nonlocal leads_carregados
 
         lead_selecionado = None
-        leads_carregados = []
 
         for item in tabela.get_children():
             tabela.delete(item)
 
-        try:
-            leads_carregados = listar_leads()
-
-        except Exception as erro:
-            messagebox.showerror(
-                "Erro ao listar",
-                (
-                    "Não foi possível carregar os leads."
-                    f"\n\n{erro}"
-                ),
-                parent=janela_lista
-            )
-            return
-
-        for lead in leads_carregados:
+        for lead in lista_leads:
             linha = lead.get("linha")
 
             tabela.insert(
@@ -240,6 +279,179 @@ def abrir_lista():
 
         botao_editar.configure(state="disabled")
         botao_excluir.configure(state="disabled")
+
+    def carregar_tabela():
+        nonlocal leads_carregados
+
+        try:
+            leads_carregados = listar_leads()
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao listar",
+                (
+                    "Não foi possível carregar os leads."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_lista
+            )
+            return
+
+        preencher_tabela(leads_carregados)
+
+    def aplicar_filtros(evento=None):
+        texto = campo_pesquisa.get().strip().casefold()
+        status_escolhido = filtro_status.get()
+
+        leads_filtrados = []
+
+        for lead in leads_carregados:
+            status_lead = str(
+                lead.get("status", "")
+            )
+
+            corresponde_status = (
+                status_escolhido == "TODOS"
+                or status_lead == status_escolhido
+            )
+
+            campos_pesquisaveis = (
+                lead.get("nome", ""),
+                lead.get("telefone", ""),
+                lead.get("produto", ""),
+                lead.get("cidade_uf", ""),
+                lead.get("email", ""),
+                lead.get("origem", ""),
+                lead.get("consultor", ""),
+            )
+
+            corresponde_texto = (
+                not texto
+                or any(
+                    texto in str(valor).casefold()
+                    for valor in campos_pesquisaveis
+                )
+            )
+
+            if corresponde_status and corresponde_texto:
+                leads_filtrados.append(lead)
+
+    
+
+        preencher_tabela(leads_filtrados)
+
+    def limpar_filtros():
+        campo_pesquisa.delete(0, tk.END)
+        filtro_status.set("TODOS")
+
+        preencher_tabela(leads_carregados)
+
+    
+    ordem_colunas = {}
+
+
+    def converter_valor_ordenacao(coluna, valor):
+        texto = str(valor).strip()
+
+        if coluna in (
+            "data_cadastro",
+            "proximo_contato",
+            "ultima_interacao",
+        ):
+            formatos = (
+                "%d/%m/%Y %H:%M",
+                "%d/%m/%Y",
+            )
+
+            for formato in formatos:
+                try:
+                    return datetime.strptime(
+                        texto,
+                        formato
+                    )
+                except ValueError:
+                    continue
+
+            return datetime.min
+
+        return texto.casefold()
+
+
+    def ordenar_tabela(coluna):
+        crescente = ordem_colunas.get(
+            coluna,
+            True
+        )
+
+        itens = []
+
+        for item_id in tabela.get_children():
+            valor = tabela.set(
+                item_id,
+                coluna
+            )
+
+            itens.append(
+                (
+                    converter_valor_ordenacao(
+                        coluna,
+                        valor
+                    ),
+                    item_id
+                )
+            )
+
+        itens.sort(
+            key=lambda item: item[0],
+            reverse=not crescente
+        )
+
+        for posicao, (_, item_id) in enumerate(itens):
+            tabela.move(
+                item_id,
+                "",
+                posicao
+            )
+
+        ordem_colunas[coluna] = not crescente
+
+        for nome_coluna in COLUNAS:
+            tabela.heading(
+                nome_coluna,
+                text=TITULOS[nome_coluna],
+                command=lambda coluna_atual=nome_coluna: (
+                    ordenar_tabela(coluna_atual)
+                )
+            )
+
+        simbolo = " ▲" if crescente else " ▼"
+
+        tabela.heading(
+            coluna,
+            text=TITULOS[coluna] + simbolo,
+            command=lambda: ordenar_tabela(coluna)
+        )
+
+    for coluna in COLUNAS:
+        tabela.heading(
+            coluna,
+            text=TITULOS[coluna],
+            command=lambda coluna_atual=coluna: (
+                ordenar_tabela(coluna_atual)
+            )
+        )
+
+    ttk.Button(
+        frame_filtros,
+        text="Filtrar",
+        command=aplicar_filtros
+    ).pack(side="left", padx=5)
+
+    ttk.Button(
+        frame_filtros,
+        text="Limpar",
+        command=limpar_filtros
+    ).pack(side="left", padx=5)
 
     def selecionar_lead(evento=None):
         nonlocal lead_selecionado
@@ -421,6 +633,12 @@ def abrir_lista():
                 pady=5
             )
 
+            if chave == "telefone":
+                campo.bind(
+                    "<KeyRelease>",
+                    mascara_telefone
+                )
+
             campos_edicao[chave] = campo
 
         container_edicao.columnconfigure(
@@ -593,6 +811,17 @@ def abrir_lista():
         lambda evento: editar()
         if tabela.selection()
         else None
+    )
+
+
+    campo_pesquisa.bind(
+    "<KeyRelease>",
+    aplicar_filtros
+)
+
+    filtro_status.bind(
+        "<<ComboboxSelected>>",
+        aplicar_filtros
     )
 
     carregar_tabela()
