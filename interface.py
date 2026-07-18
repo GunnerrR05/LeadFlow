@@ -4,6 +4,8 @@ from tkinter import ttk, messagebox
 from telas.cadastro import abrir_cadastro
 from telas.buscar import abrir_busca
 from telas.listar import abrir_lista
+from telas.dashboard import abrir_dashboard
+from telas.followups import abrir_followups
 
 
 def centralizar_janela(janela, largura, altura):
@@ -24,7 +26,7 @@ def iniciar_interface():
     janela = tk.Tk()
 
     janela.title("LeadFlow - Gerenciador de Leads")
-    centralizar_janela(janela, 500, 520)
+    centralizar_janela(janela, 500, 680)
 
     janela.resizable(False, False)
 
@@ -104,6 +106,26 @@ def iniciar_interface():
     )
 
     botao_listar.pack(pady=8)
+
+    botao_dashboard = ttk.Button(
+        container,
+        text="Dashboard",
+        command=abrir_dashboard,
+        style="Menu.TButton",
+        width=30
+    )
+
+    botao_dashboard.pack(pady=8)
+
+    botao_followups = ttk.Button(
+        container,
+        text="Follow-ups",
+        command=abrir_followups,
+        style="Menu.TButton",
+        width=30
+    )
+
+    botao_followups.pack(pady=8)
 
     ttk.Separator(
         container,
