@@ -8,35 +8,46 @@ from servicos.leads import cadastrar_lead
 def abrir_cadastro():
     janela_cadastro = tk.Toplevel()
     janela_cadastro.title("Cadastrar Lead")
-    janela_cadastro.geometry("500x700")
+    janela_cadastro.geometry("500x820")
     janela_cadastro.resizable(False, False)
 
     campos = criar_campos(janela_cadastro)
 
     def limpar_campos():
-        for nome, campo in campos.items():
+        for chave, campo in campos.items():
 
-            if isinstance(campo, ttk.Combobox):
+            if isinstance(campo, tk.Text):
+                campo.delete(
+                    "1.0",
+                    tk.END
+                )
 
-                if nome == "status":
+            elif isinstance(campo, ttk.Combobox):
+                if chave == "status":
                     campo.set("EM ANDAMENTO")
 
-                elif nome == "aplicacao":
-                    campo.set("S, F, DTF, DTG E UV")
-
-                else:
-                    campo.set("")
+                elif chave == "aplicacao":
+                    campo.set(
+                        "S, F, DTF, DTG E UV"
+                    )
 
             else:
-                campo.delete(0, tk.END)
-
-        campos["proximo_contato"].focus_set()
+                campo.delete(
+                    0,
+                    tk.END
+                )
 
     def salvar():
-        dados = {
-            nome: campo.get().strip()
-            for nome, campo in campos.items()
-        }
+        dados = {}
+
+        for chave, campo in campos.items():
+            if isinstance(campo, tk.Text):
+                dados[chave] = campo.get(
+                    "1.0",
+                    tk.END
+                ).strip()
+            else:
+                dados[chave] = campo.get().strip()
 
         if not dados["nome"]:
             messagebox.showwarning(

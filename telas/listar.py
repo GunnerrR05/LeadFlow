@@ -1,7 +1,20 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import (
+    ttk,
+    messagebox,
+    filedialog,
+)
+from datetime import datetime
 
-from componentes.campos import mascara_telefone
+from componentes.campos import (
+    mascara_telefone,
+    inserir_quebra_linha,
+)
+
+from componentes.acoes_lead import (
+    copiar_resumo,
+    abrir_whatsapp,
+)
 
 from servicos.leads import (
     listar_leads,
@@ -9,7 +22,8 @@ from servicos.leads import (
     excluir_lead,
 )
 
-from datetime import datetime
+from servicos.backup import criar_backup
+from servicos.exportacao import exportar_leads
 
 
 STATUS = [
@@ -72,15 +86,15 @@ LARGURAS = {
     "proximo_contato": 130,
     "ultima_interacao": 140,
     "status": 190,
-    "telefone": 120,
-    "nome": 160,
+    "telefone": 140,
+    "nome": 170,
     "produto": 170,
     "cidade_uf": 140,
     "email": 200,
     "aplicacao": 180,
     "origem": 140,
     "consultor": 140,
-    "observacao": 250,
+    "observacao": 280,
     "resumo": 350,
     "whatsapp": 400,
 }
@@ -89,10 +103,21 @@ LARGURAS = {
 def abrir_lista():
     lead_selecionado = None
     leads_carregados = []
+    leads_exibidos = []
+
+    botao_editar = None
+    botao_excluir = None
+    botao_copiar = None
+    botao_whatsapp = None
+    botao_acompanhamento = None
+
+    campo_status_rapido = None
+    botao_status_rapido = None
 
     janela_lista = tk.Toplevel()
     janela_lista.title("Leads Cadastrados")
-    janela_lista.geometry("1400x650")
+    janela_lista.geometry("1400x850")
+    janela_lista.minsize(1100, 700)
 
     try:
         janela_lista.state("zoomed")
@@ -114,13 +139,15 @@ def abrir_lista():
         font=("Arial", 18, "bold")
     ).pack(pady=(0, 10))
 
-    frame_filtros = ttk.Frame(container)
+    # =========================================================
+    # FILTROS
+    # =========================================================
 
+    frame_filtros = ttk.Frame(container)
     frame_filtros.pack(
         fill="x",
         pady=(0, 10)
     )
-
 
     ttk.Label(
         frame_filtros,
@@ -130,17 +157,14 @@ def abrir_lista():
         padx=(0, 5)
     )
 
-
     campo_pesquisa = ttk.Entry(
         frame_filtros,
         width=35
     )
-
     campo_pesquisa.pack(
         side="left",
         padx=(0, 15)
     )
-
 
     ttk.Label(
         frame_filtros,
@@ -150,20 +174,31 @@ def abrir_lista():
         padx=(0, 5)
     )
 
-
     filtro_status = ttk.Combobox(
         frame_filtros,
         values=["TODOS"] + STATUS,
         state="readonly",
         width=24
     )
-
     filtro_status.set("TODOS")
-
     filtro_status.pack(
         side="left",
         padx=(0, 10)
     )
+
+    label_quantidade = ttk.Label(
+        container,
+        text="",
+        font=("Arial", 10, "bold")
+    )
+    label_quantidade.pack(
+        anchor="w",
+        pady=(0, 8)
+    )
+
+    # =========================================================
+    # TABELA
+    # =========================================================
 
     frame_tabela = ttk.Frame(container)
     frame_tabela.pack(
@@ -240,24 +275,278 @@ def abrir_lista():
             stretch=False
         )
 
+    tabela.tag_configure(
+        "em_andamento",
+        background="#FFF2CC"
+    )
+
+    tabela.tag_configure(
+        "negociacao",
+        background="#DDEBFF"
+    )
+
+    tabela.tag_configure(
+        "declinado",
+        background="#FFDADA"
+    )
+
+    tabela.tag_configure(
+        "conquistado",
+        background="#DDF4DD"
+    )
+
+    tabela.tag_configure(
+        "futura",
+        background="#E8DDF5"
+    )
+
+    tabela.tag_configure(
+        "cliente_ativo",
+        background="#D9F0F0"
+    )
+
+    # =========================================================
+    # ÁREAS INFERIORES
+    # =========================================================
+
     frame_botoes = ttk.Frame(container)
-    frame_botoes.pack(pady=12)
+    frame_botoes.pack(
+        pady=(12, 8)
+    )
+
+    frame_status_rapido = ttk.LabelFrame(
+        container,
+        text="Alteração rápida de status",
+        padding=8
+    )
+    frame_status_rapido.pack(
+        fill="x",
+        pady=(0, 10)
+    )
+
+    frame_observacao = ttk.LabelFrame(
+        container,
+        text="Observação do Lead Selecionado",
+        padding=8,
+        height=300
+    )
+    frame_observacao.pack(
+        fill="x",
+        pady=(0, 5)
+    )
+
+    frame_observacao.pack_propagate(False)
+
+    texto_observacao = tk.Text(
+        frame_observacao,
+        wrap="word",
+        font=("Arial", 11)
+    )
+    texto_observacao.pack(
+        expand=True,
+        fill="both"
+    )
+    texto_observacao.configure(
+        state="disabled"
+    )
+
+    # =========================================================
+    # FUNÇÕES AUXILIARES
+    # =========================================================
+
+    def mostrar_observacao(texto=""):
+        texto_observacao.configure(
+            state="normal"
+        )
+
+        texto_observacao.delete(
+            "1.0",
+            tk.END
+        )
+
+        texto_observacao.insert(
+            "1.0",
+            texto
+        )
+
+        texto_observacao.configure(
+            state="disabled"
+        )
+
+    def desabilitar_acoes():
+        if botao_editar is not None:
+            botao_editar.configure(
+                state="disabled"
+            )
+
+        if botao_excluir is not None:
+            botao_excluir.configure(
+                state="disabled"
+            )
+
+        if botao_copiar is not None:
+            botao_copiar.configure(
+                state="disabled"
+            )
+
+        if botao_whatsapp is not None:
+            botao_whatsapp.configure(
+                state="disabled"
+            )
+
+        if botao_acompanhamento is not None:
+            botao_acompanhamento.configure(
+                state="disabled"
+            )
+
+        if campo_status_rapido is not None:
+            campo_status_rapido.set("")
+            campo_status_rapido.configure(
+                state="disabled"
+            )
+
+        if botao_status_rapido is not None:
+            botao_status_rapido.configure(
+                state="disabled"
+            )
+
+    def habilitar_acoes():
+        if botao_editar is not None:
+            botao_editar.configure(
+                state="normal"
+            )
+
+        if botao_excluir is not None:
+            botao_excluir.configure(
+                state="normal"
+            )
+
+        if botao_copiar is not None:
+            botao_copiar.configure(
+                state="normal"
+            )
+
+        if botao_whatsapp is not None:
+            botao_whatsapp.configure(
+                state="normal"
+            )
+
+        if botao_acompanhamento is not None:
+            botao_acompanhamento.configure(
+                state="normal"
+            )
+
+        if campo_status_rapido is not None:
+            campo_status_rapido.configure(
+                state="readonly"
+            )
+
+        if botao_status_rapido is not None:
+            botao_status_rapido.configure(
+                state="normal"
+            )
+
+    def obter_tag_status(status):
+        status = str(
+            status
+        ).strip().upper()
+
+        if status == "EM ANDAMENTO":
+            return "em_andamento"
+
+        if status == "NEGOCIAÇÃO":
+            return "negociacao"
+
+        if status == "DECLINADO":
+            return "declinado"
+
+        if status in (
+            "CONQUISTADO - SUPRIM",
+            "CONQUISTADO - EQUIP",
+        ):
+            return "conquistado"
+
+        if status == "FUTURA":
+            return "futura"
+
+        if status == "CLIENTE ATIVO":
+            return "cliente_ativo"
+
+        return ""
+
+    # =========================================================
+    # CARREGAMENTO E FILTROS
+    # =========================================================
 
     def preencher_tabela(lista_leads):
         nonlocal lead_selecionado
+        nonlocal leads_exibidos
 
         lead_selecionado = None
+        leads_exibidos = list(
+            lista_leads
+        )
+
+        quantidade_exibida = len(
+            leads_exibidos
+        )
+
+        quantidade_total = len(
+            leads_carregados
+        )
+
+        if quantidade_exibida == 1:
+            texto_exibidos = (
+                "1 lead exibido"
+            )
+        else:
+            texto_exibidos = (
+                f"{quantidade_exibida} leads exibidos"
+            )
+
+        label_quantidade.configure(
+            text=(
+                f"{texto_exibidos} "
+                f"de {quantidade_total} cadastrados"
+            )
+        )
+
+        mostrar_observacao()
+        desabilitar_acoes()
 
         for item in tabela.get_children():
             tabela.delete(item)
 
-        for lead in lista_leads:
-            linha = lead.get("linha")
+        for lead in leads_exibidos:
+            linha = lead.get(
+                "linha"
+            )
+
+            if linha is None:
+                continue
+
+            tag_status = obter_tag_status(
+                lead.get(
+                    "status",
+                    ""
+                )
+            )
+
+            observacao_tabela = str(
+                lead.get(
+                    "observacao",
+                    ""
+                )
+            ).replace(
+                "\n",
+                " | "
+            )
 
             tabela.insert(
                 "",
                 tk.END,
                 iid=str(linha),
+                tags=(tag_status,),
                 values=(
                     lead.get("data_cadastro", ""),
                     lead.get("proximo_contato", ""),
@@ -271,14 +560,11 @@ def abrir_lista():
                     lead.get("aplicacao", ""),
                     lead.get("origem", ""),
                     lead.get("consultor", ""),
-                    lead.get("observacao", ""),
+                    observacao_tabela,
                     lead.get("resumo", ""),
                     lead.get("whatsapp", ""),
                 )
             )
-
-        botao_editar.configure(state="disabled")
-        botao_excluir.configure(state="disabled")
 
     def carregar_tabela():
         nonlocal leads_carregados
@@ -297,17 +583,30 @@ def abrir_lista():
             )
             return
 
-        preencher_tabela(leads_carregados)
+        preencher_tabela(
+            leads_carregados
+        )
 
     def aplicar_filtros(evento=None):
-        texto = campo_pesquisa.get().strip().casefold()
-        status_escolhido = filtro_status.get()
+        texto = (
+            campo_pesquisa
+            .get()
+            .strip()
+            .casefold()
+        )
+
+        status_escolhido = (
+            filtro_status.get()
+        )
 
         leads_filtrados = []
 
         for lead in leads_carregados:
             status_lead = str(
-                lead.get("status", "")
+                lead.get(
+                    "status",
+                    ""
+                )
             )
 
             corresponde_status = (
@@ -333,25 +632,104 @@ def abrir_lista():
                 )
             )
 
-            if corresponde_status and corresponde_texto:
-                leads_filtrados.append(lead)
+            if (
+                corresponde_status
+                and corresponde_texto
+            ):
+                leads_filtrados.append(
+                    lead
+                )
 
-    
-
-        preencher_tabela(leads_filtrados)
+        preencher_tabela(
+            leads_filtrados
+        )
 
     def limpar_filtros():
-        campo_pesquisa.delete(0, tk.END)
-        filtro_status.set("TODOS")
+        campo_pesquisa.delete(
+            0,
+            tk.END
+        )
 
-        preencher_tabela(leads_carregados)
+        filtro_status.set(
+            "TODOS"
+        )
 
-    
+        preencher_tabela(
+            leads_carregados
+        )
+
+    # =========================================================
+    # EXPORTAÇÃO
+    # =========================================================
+
+    def exportar_relatorio():
+        if not leads_exibidos:
+            messagebox.showwarning(
+                "Nenhum lead",
+                (
+                    "Não existem leads visíveis "
+                    "para exportar."
+                ),
+                parent=janela_lista
+            )
+            return
+
+        caminho = filedialog.asksaveasfilename(
+            title="Salvar Relatório",
+            defaultextension=".xlsx",
+            filetypes=[
+                (
+                    "Planilha do Excel",
+                    "*.xlsx"
+                )
+            ],
+            initialfile="relatorio_leads.xlsx",
+            parent=janela_lista
+        )
+
+        if not caminho:
+            return
+
+        try:
+            arquivo = exportar_leads(
+                leads_exibidos,
+                caminho
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao exportar",
+                (
+                    "Não foi possível exportar "
+                    "o relatório."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_lista
+            )
+            return
+
+        messagebox.showinfo(
+            "Relatório exportado",
+            (
+                "O relatório foi salvo com sucesso!"
+                f"\n\n{arquivo}"
+            ),
+            parent=janela_lista
+        )
+
+    # =========================================================
+    # ORDENAÇÃO
+    # =========================================================
+
     ordem_colunas = {}
 
-
-    def converter_valor_ordenacao(coluna, valor):
-        texto = str(valor).strip()
+    def converter_valor_ordenacao(
+        coluna,
+        valor
+    ):
+        texto = str(
+            valor
+        ).strip()
 
         if coluna in (
             "data_cadastro",
@@ -369,13 +747,13 @@ def abrir_lista():
                         texto,
                         formato
                     )
+
                 except ValueError:
                     continue
 
             return datetime.min
 
         return texto.casefold()
-
 
     def ordenar_tabela(coluna):
         crescente = ordem_colunas.get(
@@ -391,12 +769,16 @@ def abrir_lista():
                 coluna
             )
 
+            valor_convertido = (
+                converter_valor_ordenacao(
+                    coluna,
+                    valor
+                )
+            )
+
             itens.append(
                 (
-                    converter_valor_ordenacao(
-                        coluna,
-                        valor
-                    ),
+                    valor_convertido,
                     item_id
                 )
             )
@@ -406,30 +788,46 @@ def abrir_lista():
             reverse=not crescente
         )
 
-        for posicao, (_, item_id) in enumerate(itens):
+        for posicao, (
+            _,
+            item_id
+        ) in enumerate(itens):
             tabela.move(
                 item_id,
                 "",
                 posicao
             )
 
-        ordem_colunas[coluna] = not crescente
+        ordem_colunas[coluna] = (
+            not crescente
+        )
 
         for nome_coluna in COLUNAS:
             tabela.heading(
                 nome_coluna,
                 text=TITULOS[nome_coluna],
                 command=lambda coluna_atual=nome_coluna: (
-                    ordenar_tabela(coluna_atual)
+                    ordenar_tabela(
+                        coluna_atual
+                    )
                 )
             )
 
-        simbolo = " ▲" if crescente else " ▼"
+        simbolo = (
+            " ▲"
+            if crescente
+            else " ▼"
+        )
 
         tabela.heading(
             coluna,
-            text=TITULOS[coluna] + simbolo,
-            command=lambda: ordenar_tabela(coluna)
+            text=(
+                TITULOS[coluna]
+                + simbolo
+            ),
+            command=lambda: ordenar_tabela(
+                coluna
+            )
         )
 
     for coluna in COLUNAS:
@@ -437,21 +835,15 @@ def abrir_lista():
             coluna,
             text=TITULOS[coluna],
             command=lambda coluna_atual=coluna: (
-                ordenar_tabela(coluna_atual)
+                ordenar_tabela(
+                    coluna_atual
+                )
             )
         )
 
-    ttk.Button(
-        frame_filtros,
-        text="Filtrar",
-        command=aplicar_filtros
-    ).pack(side="left", padx=5)
-
-    ttk.Button(
-        frame_filtros,
-        text="Limpar",
-        command=limpar_filtros
-    ).pack(side="left", padx=5)
+    # =========================================================
+    # SELEÇÃO
+    # =========================================================
 
     def selecionar_lead(evento=None):
         nonlocal lead_selecionado
@@ -460,31 +852,386 @@ def abrir_lista():
 
         if not selecao:
             lead_selecionado = None
-
-            botao_editar.configure(state="disabled")
-            botao_excluir.configure(state="disabled")
+            desabilitar_acoes()
+            mostrar_observacao()
             return
 
-        item = selecao[0]
-        linha = int(item)
+        item_id = selecao[0]
+
+        try:
+            linha = int(
+                item_id
+            )
+
+        except ValueError:
+            lead_selecionado = None
+            desabilitar_acoes()
+            mostrar_observacao()
+            return
 
         lead_selecionado = next(
             (
                 lead
                 for lead in leads_carregados
-                if lead.get("linha") == linha
+                if int(
+                    lead.get(
+                        "linha",
+                        0
+                    )
+                ) == linha
             ),
             None
         )
 
-        if lead_selecionado is not None:
-            botao_editar.configure(state="normal")
-            botao_excluir.configure(state="normal")
+        if lead_selecionado is None:
+            desabilitar_acoes()
+            mostrar_observacao()
+            return
+
+        habilitar_acoes()
+
+        campo_status_rapido.set(
+            lead_selecionado.get(
+                "status",
+                "EM ANDAMENTO"
+            )
+        )
+
+        mostrar_observacao(
+            lead_selecionado.get(
+                "observacao",
+                ""
+            )
+        )
 
     tabela.bind(
         "<<TreeviewSelect>>",
         selecionar_lead
     )
+
+    # =========================================================
+    # COPIAR E WHATSAPP
+    # =========================================================
+
+    def copiar_resumo_selecionado():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela_lista
+            )
+            return
+
+        try:
+            copiar_resumo(
+                janela_lista,
+                lead_selecionado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao copiar",
+                (
+                    "Não foi possível copiar o resumo."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_lista
+            )
+            return
+
+        messagebox.showinfo(
+            "Resumo copiado",
+            "O resumo do lead foi copiado.",
+            parent=janela_lista
+        )
+
+    def abrir_whatsapp_selecionado():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela_lista
+            )
+            return
+
+        try:
+            abrir_whatsapp(
+                lead_selecionado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao abrir WhatsApp",
+                (
+                    "Não foi possível abrir o WhatsApp."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_lista
+            )
+
+    # =========================================================
+    # ALTERAÇÃO RÁPIDA DE STATUS
+    # =========================================================
+
+    def atualizar_status_rapido():
+        nonlocal lead_selecionado
+
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela_lista
+            )
+            return
+
+        novo_status = (
+            campo_status_rapido
+            .get()
+            .strip()
+        )
+
+        if not novo_status:
+            messagebox.showwarning(
+                "Status",
+                "Selecione o novo status.",
+                parent=janela_lista
+            )
+            return
+
+        status_atual = str(
+            lead_selecionado.get(
+                "status",
+                ""
+            )
+        ).strip()
+
+        if novo_status == status_atual:
+            messagebox.showinfo(
+                "Status",
+                "O lead já possui esse status.",
+                parent=janela_lista
+            )
+            return
+
+        lead_atualizado = (
+            lead_selecionado.copy()
+        )
+
+        lead_atualizado[
+            "status"
+        ] = novo_status
+
+        try:
+            atualizar_lead(
+                lead_atualizado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao atualizar",
+                (
+                    "Não foi possível alterar "
+                    "o status do lead."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_lista
+            )
+            return
+
+        carregar_tabela()
+        aplicar_filtros()
+
+        messagebox.showinfo(
+            "Status atualizado",
+            (
+                "O status do lead foi alterado "
+                "com sucesso."
+            ),
+            parent=janela_lista
+        )
+
+    # =========================================================
+    # ACOMPANHAMENTO
+    # =========================================================
+
+    def adicionar_acompanhamento():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela_lista
+            )
+            return
+
+        janela_acompanhamento = tk.Toplevel(
+            janela_lista
+        )
+        janela_acompanhamento.title(
+            "Adicionar Acompanhamento"
+        )
+        janela_acompanhamento.geometry(
+            "650x420"
+        )
+        janela_acompanhamento.transient(
+            janela_lista
+        )
+        janela_acompanhamento.grab_set()
+
+        container_acompanhamento = ttk.Frame(
+            janela_acompanhamento,
+            padding=20
+        )
+        container_acompanhamento.pack(
+            expand=True,
+            fill="both"
+        )
+
+        ttk.Label(
+            container_acompanhamento,
+            text="Novo acompanhamento",
+            font=("Arial", 18, "bold")
+        ).pack(pady=(0, 5))
+
+        ttk.Label(
+            container_acompanhamento,
+            text=(
+                f"Lead: "
+                f"{lead_selecionado.get('nome', '')}"
+            )
+        ).pack(pady=(0, 15))
+
+        texto_novo = tk.Text(
+            container_acompanhamento,
+            height=12,
+            wrap="word",
+            font=("Arial", 11)
+        )
+        texto_novo.pack(
+            expand=True,
+            fill="both"
+        )
+
+        def salvar_acompanhamento():
+            nova_observacao = texto_novo.get(
+                "1.0",
+                tk.END
+            ).strip()
+
+            if not nova_observacao:
+                messagebox.showwarning(
+                    "Observação vazia",
+                    "Digite o acompanhamento.",
+                    parent=janela_acompanhamento
+                )
+                texto_novo.focus_set()
+                return
+
+            lead_atualizado = (
+                lead_selecionado.copy()
+            )
+
+            observacao_anterior = str(
+                lead_atualizado.get(
+                    "observacao",
+                    ""
+                )
+            ).strip()
+
+            data_hora = datetime.now().strftime(
+                "%d/%m/%Y %H:%M"
+            )
+
+            novo_registro = (
+                f"[{data_hora}]\n"
+                f"{nova_observacao}"
+            )
+
+            if observacao_anterior:
+                observacao_completa = (
+                    f"{observacao_anterior}"
+                    f"\n\n{novo_registro}"
+                )
+            else:
+                observacao_completa = (
+                    novo_registro
+                )
+
+            lead_atualizado[
+                "observacao"
+            ] = observacao_completa
+
+            lead_atualizado[
+                "ultima_interacao"
+            ] = data_hora
+
+            try:
+                atualizar_lead(
+                    lead_atualizado
+                )
+
+            except Exception as erro:
+                messagebox.showerror(
+                    "Erro ao atualizar",
+                    (
+                        "Não foi possível salvar "
+                        "o acompanhamento."
+                        f"\n\n{erro}"
+                    ),
+                    parent=janela_acompanhamento
+                )
+                return
+
+            janela_acompanhamento.destroy()
+            carregar_tabela()
+            aplicar_filtros()
+
+            messagebox.showinfo(
+                "Acompanhamento salvo",
+                (
+                    "O acompanhamento foi "
+                    "adicionado com sucesso."
+                ),
+                parent=janela_lista
+            )
+
+        frame_acoes = ttk.Frame(
+            container_acompanhamento
+        )
+        frame_acoes.pack(
+            pady=(15, 0)
+        )
+
+        ttk.Button(
+            frame_acoes,
+            text="Salvar Acompanhamento",
+            command=salvar_acompanhamento
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ttk.Button(
+            frame_acoes,
+            text="Cancelar",
+            command=janela_acompanhamento.destroy
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        texto_novo.bind(
+            "<Control-Return>",
+            lambda evento: (
+                salvar_acompanhamento(),
+                "break"
+            )[1]
+        )
+
+        texto_novo.focus_set()
+
+    # =========================================================
+    # EDIÇÃO COMPLETA
+    # =========================================================
 
     def editar():
         nonlocal lead_selecionado
@@ -497,11 +1244,22 @@ def abrir_lista():
             )
             return
 
-        janela_editar = tk.Toplevel(janela_lista)
-        janela_editar.title("Editar Lead")
-        janela_editar.geometry("540x720")
-        janela_editar.resizable(False, False)
-        janela_editar.transient(janela_lista)
+        janela_editar = tk.Toplevel(
+            janela_lista
+        )
+        janela_editar.title(
+            "Editar Lead"
+        )
+        janela_editar.geometry(
+            "540x830"
+        )
+        janela_editar.resizable(
+            False,
+            False
+        )
+        janela_editar.transient(
+            janela_lista
+        )
         janela_editar.grab_set()
 
         container_edicao = ttk.Frame(
@@ -552,21 +1310,60 @@ def abrir_lista():
         campos_edicao = {}
 
         campos = [
-            ("Próximo Contato", "proximo_contato"),
-            ("Última Interação", "ultima_interacao"),
-            ("Status", "status"),
-            ("Telefone", "telefone"),
-            ("Nome", "nome"),
-            ("Produto", "produto"),
-            ("Cidade / UF", "cidade_uf"),
-            ("E-mail", "email"),
-            ("Aplicação", "aplicacao"),
-            ("Origem", "origem"),
-            ("Consultor", "consultor"),
-            ("Observação", "observacao"),
+            (
+                "Próximo Contato",
+                "proximo_contato"
+            ),
+            (
+                "Última Interação",
+                "ultima_interacao"
+            ),
+            (
+                "Status",
+                "status"
+            ),
+            (
+                "Telefone",
+                "telefone"
+            ),
+            (
+                "Nome",
+                "nome"
+            ),
+            (
+                "Produto",
+                "produto"
+            ),
+            (
+                "Cidade / UF",
+                "cidade_uf"
+            ),
+            (
+                "E-mail",
+                "email"
+            ),
+            (
+                "Aplicação",
+                "aplicacao"
+            ),
+            (
+                "Origem",
+                "origem"
+            ),
+            (
+                "Consultor",
+                "consultor"
+            ),
+            (
+                "Observação",
+                "observacao"
+            ),
         ]
 
-        for numero_linha, (texto, chave) in enumerate(
+        for numero_linha, (
+            texto,
+            chave
+        ) in enumerate(
             campos,
             start=2
         ):
@@ -611,6 +1408,27 @@ def abrir_lista():
                     )
                 )
 
+            elif chave == "observacao":
+                campo = tk.Text(
+                    container_edicao,
+                    width=39,
+                    height=4,
+                    wrap="word"
+                )
+
+                campo.insert(
+                    "1.0",
+                    lead_selecionado.get(
+                        chave,
+                        ""
+                    )
+                )
+
+                campo.bind(
+                    "<Shift-Return>",
+                    inserir_quebra_linha
+                )
+
             else:
                 campo = ttk.Entry(
                     container_edicao,
@@ -649,12 +1467,30 @@ def abrir_lista():
         def salvar_alteracoes():
             nonlocal lead_selecionado
 
-            lead_atualizado = lead_selecionado.copy()
+            lead_atualizado = (
+                lead_selecionado.copy()
+            )
 
-            for chave, campo in campos_edicao.items():
-                lead_atualizado[chave] = (
-                    campo.get().strip()
-                )
+            for chave, campo in (
+                campos_edicao.items()
+            ):
+                if isinstance(
+                    campo,
+                    tk.Text
+                ):
+                    valor = campo.get(
+                        "1.0",
+                        tk.END
+                    ).strip()
+
+                else:
+                    valor = (
+                        campo.get().strip()
+                    )
+
+                lead_atualizado[
+                    chave
+                ] = valor
 
             if not lead_atualizado["nome"]:
                 messagebox.showwarning(
@@ -662,7 +1498,9 @@ def abrir_lista():
                     "Informe o nome do lead.",
                     parent=janela_editar
                 )
-                campos_edicao["nome"].focus_set()
+                campos_edicao[
+                    "nome"
+                ].focus_set()
                 return
 
             if not lead_atualizado["telefone"]:
@@ -671,7 +1509,9 @@ def abrir_lista():
                     "Informe o telefone do lead.",
                     parent=janela_editar
                 )
-                campos_edicao["telefone"].focus_set()
+                campos_edicao[
+                    "telefone"
+                ].focus_set()
                 return
 
             if not lead_atualizado["produto"]:
@@ -680,17 +1520,22 @@ def abrir_lista():
                     "Informe o produto.",
                     parent=janela_editar
                 )
-                campos_edicao["produto"].focus_set()
+                campos_edicao[
+                    "produto"
+                ].focus_set()
                 return
 
             try:
-                atualizar_lead(lead_atualizado)
+                atualizar_lead(
+                    lead_atualizado
+                )
 
             except Exception as erro:
                 messagebox.showerror(
                     "Erro ao atualizar",
                     (
-                        "Não foi possível atualizar o lead."
+                        "Não foi possível atualizar "
+                        "o lead."
                         f"\n\n{erro}"
                     ),
                     parent=janela_editar
@@ -699,6 +1544,7 @@ def abrir_lista():
 
             janela_editar.destroy()
             carregar_tabela()
+            aplicar_filtros()
 
             messagebox.showinfo(
                 "Sucesso",
@@ -717,6 +1563,10 @@ def abrir_lista():
             pady=20
         )
 
+    # =========================================================
+    # EXCLUSÃO
+    # =========================================================
+
     def excluir():
         nonlocal lead_selecionado
 
@@ -733,7 +1583,8 @@ def abrir_lista():
             (
                 "Deseja realmente excluir este lead?"
                 "\n\n"
-                f"Nome: {lead_selecionado.get('nome', '')}\n"
+                f"Nome: "
+                f"{lead_selecionado.get('nome', '')}\n"
                 f"Telefone: "
                 f"{lead_selecionado.get('telefone', '')}"
             ),
@@ -744,13 +1595,18 @@ def abrir_lista():
             return
 
         try:
-            excluir_lead(lead_selecionado)
+            criar_backup()
+
+            excluir_lead(
+                lead_selecionado
+            )
 
         except Exception as erro:
             messagebox.showerror(
                 "Erro ao excluir",
                 (
-                    "Não foi possível excluir o lead."
+                    "Não foi possível criar o backup "
+                    "ou excluir o lead."
                     f"\n\n{erro}"
                 ),
                 parent=janela_lista
@@ -758,6 +1614,7 @@ def abrir_lista():
             return
 
         carregar_tabela()
+        aplicar_filtros()
 
         messagebox.showinfo(
             "Sucesso",
@@ -765,12 +1622,46 @@ def abrir_lista():
             parent=janela_lista
         )
 
-    botao_atualizar = ttk.Button(
+    # =========================================================
+    # BOTÕES DOS FILTROS
+    # =========================================================
+
+    ttk.Button(
+        frame_filtros,
+        text="Filtrar",
+        command=aplicar_filtros
+    ).pack(
+        side="left",
+        padx=5
+    )
+
+    ttk.Button(
+        frame_filtros,
+        text="Limpar",
+        command=limpar_filtros
+    ).pack(
+        side="left",
+        padx=5
+    )
+
+    # =========================================================
+    # BOTÕES PRINCIPAIS
+    # =========================================================
+
+    ttk.Button(
         frame_botoes,
         text="Atualizar Lista",
         command=carregar_tabela
+    ).pack(
+        side="left",
+        padx=5
     )
-    botao_atualizar.pack(
+
+    ttk.Button(
+        frame_botoes,
+        text="Exportar Relatório",
+        command=exportar_relatorio
+    ).pack(
         side="left",
         padx=5
     )
@@ -786,6 +1677,17 @@ def abrir_lista():
         padx=5
     )
 
+    botao_acompanhamento = ttk.Button(
+        frame_botoes,
+        text="Adicionar Acompanhamento",
+        command=adicionar_acompanhamento,
+        state="disabled"
+    )
+    botao_acompanhamento.pack(
+        side="left",
+        padx=5
+    )
+
     botao_excluir = ttk.Button(
         frame_botoes,
         text="Excluir Lead",
@@ -793,6 +1695,28 @@ def abrir_lista():
         state="disabled"
     )
     botao_excluir.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_copiar = ttk.Button(
+        frame_botoes,
+        text="Copiar Resumo",
+        command=copiar_resumo_selecionado,
+        state="disabled"
+    )
+    botao_copiar.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_whatsapp = ttk.Button(
+        frame_botoes,
+        text="Abrir WhatsApp",
+        command=abrir_whatsapp_selecionado,
+        state="disabled"
+    )
+    botao_whatsapp.pack(
         side="left",
         padx=5
     )
@@ -806,22 +1730,68 @@ def abrir_lista():
         padx=5
     )
 
-    tabela.bind(
-        "<Double-1>",
-        lambda evento: editar()
-        if tabela.selection()
-        else None
+    # =========================================================
+    # CONTROLES DO STATUS RÁPIDO
+    # =========================================================
+
+    ttk.Label(
+        frame_status_rapido,
+        text="Novo status:"
+    ).pack(
+        side="left",
+        padx=(0, 5)
     )
 
+    campo_status_rapido = ttk.Combobox(
+        frame_status_rapido,
+        values=STATUS,
+        state="disabled",
+        width=28
+    )
+    campo_status_rapido.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_status_rapido = ttk.Button(
+        frame_status_rapido,
+        text="Atualizar Status",
+        command=atualizar_status_rapido,
+        state="disabled"
+    )
+    botao_status_rapido.pack(
+        side="left",
+        padx=5
+    )
+
+    # =========================================================
+    # EVENTOS
+    # =========================================================
+
+    tabela.bind(
+        "<Double-1>",
+        lambda evento: (
+            editar()
+            if tabela.selection()
+            else None
+        )
+    )
 
     campo_pesquisa.bind(
-    "<KeyRelease>",
-    aplicar_filtros
-)
+        "<KeyRelease>",
+        aplicar_filtros
+    )
 
     filtro_status.bind(
         "<<ComboboxSelected>>",
         aplicar_filtros
+    )
+
+    campo_status_rapido.bind(
+        "<Return>",
+        lambda evento: (
+            atualizar_status_rapido()
+        )
     )
 
     carregar_tabela()

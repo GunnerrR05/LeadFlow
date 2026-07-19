@@ -136,6 +136,13 @@ def mascara_telefone(evento):
     campo.delete(0, tk.END)
     campo.insert(0, texto)
 
+def inserir_quebra_linha(evento):
+    evento.widget.insert(
+        tk.INSERT,
+        "\n"
+    )
+
+    return "break"
 
 def criar_campos(janela):
     """
@@ -210,10 +217,23 @@ def criar_campos(janela):
 
             campo.set(APLICACOES[0])
 
+        elif chave == "observacao":
+            campo = tk.Text(
+                container,
+                width=40,
+                height=4,
+                wrap="word"
+            )
+
+            campo.bind(
+                "<Shift-Return>",
+                inserir_quebra_linha
+            )
+
         else:
             campo = ttk.Entry(
                 container,
-                width=35
+                width=40
             )
 
         campo.grid(

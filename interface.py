@@ -1,11 +1,18 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 
 from telas.cadastro import abrir_cadastro
 from telas.buscar import abrir_busca
 from telas.listar import abrir_lista
 from telas.dashboard import abrir_dashboard
 from telas.followups import abrir_followups
+from servicos.backup import (
+    criar_backup,
+    criar_backup_diario,
+    restaurar_backup,
+    PASTA_BACKUPS,
+)
+from servicos.leads import obter_followups
 
 
 def centralizar_janela(janela, largura, altura):
@@ -26,7 +33,11 @@ def iniciar_interface():
     janela = tk.Tk()
 
     janela.title("LeadFlow - Gerenciador de Leads")
-    centralizar_janela(janela, 500, 680)
+    centralizar_janela(
+        janela,
+        500,
+        820
+    )
 
     janela.resizable(False, False)
 
@@ -76,6 +87,163 @@ def iniciar_interface():
     )
 
     subtitulo.pack(pady=(0, 30))
+
+    def fazer_backup():
+        try:
+            arquivo_backup = criar_backup()
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro no backup",
+                (
+                    "Não foi possível criar o backup."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+            return
+
+        messagebox.showinfo(
+            "Backup concluído",
+            (
+                "Backup criado com sucesso!"
+                f"\n\nArquivo: {arquivo_backup.name}"
+                "\nPasta: backups"
+            ),
+            parent=janela
+        )
+
+    def restaurar_planilha():
+        arquivo_selecionado = filedialog.askopenfilename(
+            title="Selecionar Backup",
+            initialdir=PASTA_BACKUPS,
+            filetypes=[
+                (
+                    "Planilhas do Excel",
+                    "*.xlsx"
+                )
+            ],
+            parent=janela
+        )
+
+        if not arquivo_selecionado:
+            return
+
+        confirmacao = messagebox.askyesno(
+            "Restaurar Backup",
+            (
+                "A planilha atual será substituída "
+                "pelo backup selecionado.\n\n"
+                "Antes disso, o sistema criará uma "
+                "cópia de segurança da planilha atual.\n\n"
+                "Deseja continuar?"
+            ),
+            parent=janela
+        )
+
+        if not confirmacao:
+            return
+
+        try:
+            backup_seguranca = restaurar_backup(
+                arquivo_selecionado
+            )
+
+        except PermissionError:
+            messagebox.showerror(
+                "Planilha em uso",
+                (
+                    "Não foi possível restaurar o backup.\n\n"
+                    "Feche o arquivo leads.xlsx no Excel "
+                    "e tente novamente."
+                ),
+                parent=janela
+            )
+            return
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro na restauração",
+                (
+                    "Não foi possível restaurar o backup."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+            return
+
+        mensagem = (
+            "Backup restaurado com sucesso!"
+        )
+
+        if backup_seguranca is not None:
+            mensagem += (
+                "\n\nUma cópia da planilha anterior foi criada:"
+                f"\n{backup_seguranca.name}"
+            )
+
+        messagebox.showinfo(
+            "Restauração concluída",
+            mensagem,
+            parent=janela
+        )
+
+    def verificar_backup_diario():
+        try:
+            criar_backup_diario()
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro no backup automático",
+                (
+                    "Não foi possível criar o "
+                    "backup automático diário."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+
+    def verificar_followups_iniciais():
+        try:
+            grupos = obter_followups()
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro nos follow-ups",
+                (
+                    "Não foi possível verificar "
+                    "os follow-ups."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+            return
+
+        quantidade_atrasados = len(
+            grupos["atrasados"]
+        )
+
+        quantidade_hoje = len(
+            grupos["hoje"]
+        )
+
+        if (
+            quantidade_atrasados == 0
+            and quantidade_hoje == 0
+        ):
+            return
+
+        mensagem = (
+            "Você possui follow-ups pendentes:\n\n"
+            f"Atrasados: {quantidade_atrasados}\n"
+            f"Para hoje: {quantidade_hoje}"
+        )
+
+        messagebox.showwarning(
+            "Follow-ups pendentes",
+            mensagem,
+            parent=janela
+        )
 
     botao_cadastrar = ttk.Button(
         container,
@@ -135,6 +303,26 @@ def iniciar_interface():
         pady=25
     )
 
+    botao_backup = ttk.Button(
+        container,
+        text="Fazer Backup",
+        command=fazer_backup,
+        style="Menu.TButton",
+        width=30
+    )
+
+    botao_backup.pack(pady=8)
+
+    botao_restaurar = ttk.Button(
+        container,
+        text="Restaurar Backup",
+        command=restaurar_planilha,
+        style="Menu.TButton",
+        width=30
+    )
+
+    botao_restaurar.pack(pady=8)
+
     def fechar_programa():
         confirmacao = messagebox.askyesno(
             "Fechar programa",
@@ -169,6 +357,16 @@ def iniciar_interface():
     janela.protocol(
         "WM_DELETE_WINDOW",
         fechar_programa
+    )
+
+    janela.after(
+        300,
+        verificar_backup_diario
+    )
+
+    janela.after(
+        700,
+        verificar_followups_iniciais
     )
 
     janela.mainloop()

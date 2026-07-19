@@ -11,3 +11,6 @@ venv/
 
 # Banco de dados local
 leads.xlsx
+
+# Backup
+backups/

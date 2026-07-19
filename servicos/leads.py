@@ -7,6 +7,7 @@ from excel import (
 )
 from datetime import date, datetime
 
+import re
 
 CAMPOS_LEAD = (
     "proximo_contato",
@@ -53,6 +54,41 @@ def _normalizar_telefone(valor):
         for caractere in texto
         if caractere.isdigit()
     )
+
+def _validar_telefone(valor):
+    numeros = _normalizar_telefone(valor)
+
+    if len(numeros) in (10, 11):
+        return
+
+    if (
+        len(numeros) in (12, 13)
+        and numeros.startswith("55")
+    ):
+        return
+
+    raise ValueError(
+        "Telefone inválido. Informe o DDD e "
+        "um telefone com 10 ou 11 números."
+    )
+
+
+def _validar_email(valor):
+    email = _converter_para_texto(valor)
+
+    if not email:
+        return
+
+    padrao = (
+        r"^[A-Za-z0-9._%+-]+"
+        r"@[A-Za-z0-9.-]+"
+        r"\.[A-Za-z]{2,}$"
+    )
+
+    if not re.fullmatch(padrao, email):
+        raise ValueError(
+            "E-mail inválido. Verifique o endereço informado."
+        )
 
 def _validar_data(valor, nome_campo, formatos):
     """
@@ -129,6 +165,14 @@ def _validar_lead(lead):
         raise ValueError(
             "O produto é obrigatório."
         )
+
+    _validar_telefone(
+        lead["telefone"]
+    )
+
+    _validar_email(
+        lead["email"]
+    )
 
     _validar_data(
         lead["proximo_contato"],
@@ -336,15 +380,24 @@ def obter_followups():
         "atrasados": [],
         "hoje": [],
         "proximos": [],
+        "sem_data": [],
         "invalidos": [],
     }
 
     for lead in listar_leads():
-        data_contato = _converter_data_proximo_contato(
-            lead.get("proximo_contato")
+        valor_proximo_contato = _converter_para_texto(
+            lead.get("proximo_contato", "")
         )
 
         item = lead.copy()
+
+        if not valor_proximo_contato:
+            grupos["sem_data"].append(item)
+            continue
+
+        data_contato = _converter_data_proximo_contato(
+            valor_proximo_contato
+        )
 
         if data_contato is None:
             grupos["invalidos"].append(item)

@@ -1,13 +1,23 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from componentes.campos import mascara_telefone
+from componentes.campos import (
+    mascara_telefone,
+    inserir_quebra_linha,
+)
+
+from componentes.acoes_lead import (
+    copiar_resumo,
+    abrir_whatsapp,
+)
 
 from servicos.leads import (
     buscar_lead,
     atualizar_lead,
     excluir_lead,
 )
+
+from servicos.backup import criar_backup
 
 
 STATUS = [
@@ -56,7 +66,10 @@ def abrir_busca():
     ttk.Label(
         frame_busca,
         text="Telefone:"
-    ).pack(side="left", padx=(0, 8))
+    ).pack(
+        side="left",
+        padx=(0, 8)
+    )
 
     campo_telefone = ttk.Entry(
         frame_busca,
@@ -93,30 +106,127 @@ def abrir_busca():
         resultado.delete("1.0", tk.END)
         resultado.configure(state="disabled")
 
+    def habilitar_acoes():
+        botao_editar.configure(state="normal")
+        botao_excluir.configure(state="normal")
+        botao_copiar.configure(state="normal")
+        botao_whatsapp.configure(state="normal")
+
+    def desabilitar_acoes():
+        botao_editar.configure(state="disabled")
+        botao_excluir.configure(state="disabled")
+        botao_copiar.configure(state="disabled")
+        botao_whatsapp.configure(state="disabled")
+
     def mostrar_lead(lead):
         limpar_resultado()
 
         texto = (
-            f"Data de Cadastro: {lead.get('data_cadastro', '')}\n\n"
-            f"Próximo Contato: {lead.get('proximo_contato', '')}\n"
-            f"Última Interação: {lead.get('ultima_interacao', '')}\n"
-            f"Status: {lead.get('status', '')}\n\n"
-            f"Telefone: {lead.get('telefone', '')}\n"
-            f"Nome: {lead.get('nome', '')}\n"
-            f"Produto: {lead.get('produto', '')}\n"
-            f"Cidade / UF: {lead.get('cidade_uf', '')}\n"
-            f"E-mail: {lead.get('email', '')}\n"
-            f"Aplicação: {lead.get('aplicacao', '')}\n"
-            f"Origem: {lead.get('origem', '')}\n"
-            f"Consultor: {lead.get('consultor', '')}\n"
-            f"Observação: {lead.get('observacao', '')}\n\n"
-            f"Resumo:\n{lead.get('resumo', '')}\n\n"
-            f"Nome no WhatsApp:\n{lead.get('whatsapp', '')}"
+            f"Data de Cadastro: "
+            f"{lead.get('data_cadastro', '')}\n\n"
+
+            f"Próximo Contato: "
+            f"{lead.get('proximo_contato', '')}\n"
+
+            f"Última Interação: "
+            f"{lead.get('ultima_interacao', '')}\n"
+
+            f"Status: "
+            f"{lead.get('status', '')}\n\n"
+
+            f"Telefone: "
+            f"{lead.get('telefone', '')}\n"
+
+            f"Nome: "
+            f"{lead.get('nome', '')}\n"
+
+            f"Produto: "
+            f"{lead.get('produto', '')}\n"
+
+            f"Cidade / UF: "
+            f"{lead.get('cidade_uf', '')}\n"
+
+            f"E-mail: "
+            f"{lead.get('email', '')}\n"
+
+            f"Aplicação: "
+            f"{lead.get('aplicacao', '')}\n"
+
+            f"Origem: "
+            f"{lead.get('origem', '')}\n"
+
+            f"Consultor: "
+            f"{lead.get('consultor', '')}\n"
+
+            f"Observação: "
+            f"{lead.get('observacao', '')}\n\n"
+
+            f"Resumo:\n"
+            f"{lead.get('resumo', '')}\n\n"
+
+            f"Nome no WhatsApp:\n"
+            f"{lead.get('whatsapp', '')}"
         )
 
         resultado.configure(state="normal")
         resultado.insert("1.0", texto)
         resultado.configure(state="disabled")
+
+    def copiar_resumo_lead():
+        if lead_encontrado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Busque um lead primeiro.",
+                parent=janela_busca
+            )
+            return
+
+        try:
+            copiar_resumo(
+                janela_busca,
+                lead_encontrado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao copiar",
+                (
+                    "Não foi possível copiar o resumo."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_busca
+            )
+            return
+
+        messagebox.showinfo(
+            "Resumo copiado",
+            "O resumo do lead foi copiado.",
+            parent=janela_busca
+        )
+
+    def abrir_whatsapp_lead():
+        if lead_encontrado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Busque um lead primeiro.",
+                parent=janela_busca
+            )
+            return
+
+        try:
+            abrir_whatsapp(
+                lead_encontrado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao abrir WhatsApp",
+                (
+                    "Não foi possível abrir o WhatsApp."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_busca
+            )
 
     def buscar():
         nonlocal lead_encontrado
@@ -133,33 +243,45 @@ def abrir_busca():
             return
 
         try:
-            lead_encontrado = buscar_lead(telefone)
+            lead_encontrado = buscar_lead(
+                telefone
+            )
 
         except Exception as erro:
+            lead_encontrado = None
+
+            limpar_resultado()
+            desabilitar_acoes()
+
             messagebox.showerror(
                 "Erro na busca",
-                f"Não foi possível buscar o lead.\n\n{erro}",
+                (
+                    "Não foi possível buscar o lead."
+                    f"\n\n{erro}"
+                ),
                 parent=janela_busca
             )
             return
 
         if lead_encontrado is None:
             limpar_resultado()
-
-            botao_editar.configure(state="disabled")
-            botao_excluir.configure(state="disabled")
+            desabilitar_acoes()
 
             messagebox.showwarning(
                 "Lead não encontrado",
-                "Nenhum lead foi encontrado com esse telefone.",
+                (
+                    "Nenhum lead foi encontrado "
+                    "com esse telefone."
+                ),
                 parent=janela_busca
             )
             return
 
-        mostrar_lead(lead_encontrado)
+        mostrar_lead(
+            lead_encontrado
+        )
 
-        botao_editar.configure(state="normal")
-        botao_excluir.configure(state="normal")
+        habilitar_acoes()
 
     botao_buscar = ttk.Button(
         frame_busca,
@@ -177,11 +299,18 @@ def abrir_busca():
             )
             return
 
-        janela_editar = tk.Toplevel(janela_busca)
+        janela_editar = tk.Toplevel(
+            janela_busca
+        )
         janela_editar.title("Editar Lead")
-        janela_editar.geometry("520x720")
-        janela_editar.resizable(False, False)
-        janela_editar.transient(janela_busca)
+        janela_editar.geometry("520x830")
+        janela_editar.resizable(
+            False,
+            False
+        )
+        janela_editar.transient(
+            janela_busca
+        )
         janela_editar.grab_set()
 
         container_edicao = ttk.Frame(
@@ -232,18 +361,54 @@ def abrir_busca():
         campos_edicao = {}
 
         campos = [
-            ("Próximo Contato", "proximo_contato"),
-            ("Última Interação", "ultima_interacao"),
-            ("Status", "status"),
-            ("Telefone", "telefone"),
-            ("Nome", "nome"),
-            ("Produto", "produto"),
-            ("Cidade / UF", "cidade_uf"),
-            ("E-mail", "email"),
-            ("Aplicação", "aplicacao"),
-            ("Origem", "origem"),
-            ("Consultor", "consultor"),
-            ("Observação", "observacao"),
+            (
+                "Próximo Contato",
+                "proximo_contato"
+            ),
+            (
+                "Última Interação",
+                "ultima_interacao"
+            ),
+            (
+                "Status",
+                "status"
+            ),
+            (
+                "Telefone",
+                "telefone"
+            ),
+            (
+                "Nome",
+                "nome"
+            ),
+            (
+                "Produto",
+                "produto"
+            ),
+            (
+                "Cidade / UF",
+                "cidade_uf"
+            ),
+            (
+                "E-mail",
+                "email"
+            ),
+            (
+                "Aplicação",
+                "aplicacao"
+            ),
+            (
+                "Origem",
+                "origem"
+            ),
+            (
+                "Consultor",
+                "consultor"
+            ),
+            (
+                "Observação",
+                "observacao"
+            ),
         ]
 
         for linha, (texto, chave) in enumerate(
@@ -268,6 +433,7 @@ def abrir_busca():
                     state="readonly",
                     width=35
                 )
+
                 campo.set(
                     lead_encontrado.get(
                         chave,
@@ -282,10 +448,40 @@ def abrir_busca():
                     state="readonly",
                     width=35
                 )
+
                 campo.set(
                     lead_encontrado.get(
                         chave,
                         APLICACOES[0]
+                    )
+                )
+
+            elif chave == "observacao":
+                campo = tk.Text(
+                    container_edicao,
+                    width=38,
+                    height=4,
+                    wrap="word"
+                )
+
+                campo.insert(
+                    "1.0",
+                    lead_encontrado.get(
+                        chave,
+                        ""
+                    )
+                )
+
+                campo.bind(
+                    "<Shift-Return>",
+                    inserir_quebra_linha
+                )
+
+                campo.insert(
+                    "1.0",
+                    lead_encontrado.get(
+                        chave,
+                        ""
                     )
                 )
 
@@ -294,6 +490,7 @@ def abrir_busca():
                     container_edicao,
                     width=38
                 )
+
                 campo.insert(
                     0,
                     lead_encontrado.get(
@@ -326,12 +523,22 @@ def abrir_busca():
         def salvar_edicao():
             nonlocal lead_encontrado
 
-            dados_atualizados = lead_encontrado.copy()
+            dados_atualizados = (
+                lead_encontrado.copy()
+            )
 
             for chave, campo in campos_edicao.items():
-                dados_atualizados[chave] = (
-                    campo.get().strip()
-                )
+
+                if isinstance(campo, tk.Text):
+                    dados_atualizados[chave] = campo.get(
+                        "1.0",
+                        tk.END
+                    ).strip()
+
+                else:
+                    dados_atualizados[chave] = (
+                        campo.get().strip()
+                    )
 
             if not dados_atualizados["nome"]:
                 messagebox.showwarning(
@@ -339,7 +546,11 @@ def abrir_busca():
                     "Informe o nome do lead.",
                     parent=janela_editar
                 )
-                campos_edicao["nome"].focus_set()
+
+                campos_edicao[
+                    "nome"
+                ].focus_set()
+
                 return
 
             if not dados_atualizados["telefone"]:
@@ -348,7 +559,11 @@ def abrir_busca():
                     "Informe o telefone do lead.",
                     parent=janela_editar
                 )
-                campos_edicao["telefone"].focus_set()
+
+                campos_edicao[
+                    "telefone"
+                ].focus_set()
+
                 return
 
             if not dados_atualizados["produto"]:
@@ -357,30 +572,63 @@ def abrir_busca():
                     "Informe o produto.",
                     parent=janela_editar
                 )
-                campos_edicao["produto"].focus_set()
+
+                campos_edicao[
+                    "produto"
+                ].focus_set()
+
                 return
 
             try:
-                atualizar_lead(dados_atualizados)
+                atualizar_lead(
+                    dados_atualizados
+                )
 
                 lead_atualizado = buscar_lead(
-                    dados_atualizados["telefone"]
+                    dados_atualizados[
+                        "telefone"
+                    ]
                 )
 
                 if lead_atualizado is not None:
-                    lead_encontrado = lead_atualizado
+                    lead_encontrado = (
+                        lead_atualizado
+                    )
                 else:
-                    lead_encontrado = dados_atualizados
+                    lead_encontrado = (
+                        dados_atualizados
+                    )
 
             except Exception as erro:
                 messagebox.showerror(
                     "Erro ao atualizar",
-                    f"Não foi possível atualizar o lead.\n\n{erro}",
+                    (
+                        "Não foi possível atualizar "
+                        "o lead."
+                        f"\n\n{erro}"
+                    ),
                     parent=janela_editar
                 )
                 return
 
-            mostrar_lead(lead_encontrado)
+            mostrar_lead(
+                lead_encontrado
+            )
+
+            campo_telefone.delete(
+                0,
+                tk.END
+            )
+
+            campo_telefone.insert(
+                0,
+                lead_encontrado.get(
+                    "telefone",
+                    ""
+                )
+            )
+
+            habilitar_acoes()
 
             messagebox.showinfo(
                 "Sucesso",
@@ -415,9 +663,14 @@ def abrir_busca():
         confirmacao = messagebox.askyesno(
             "Excluir Lead",
             (
-                "Deseja realmente excluir este lead?\n\n"
-                f"Nome: {lead_encontrado.get('nome', '')}\n"
-                f"Telefone: {lead_encontrado.get('telefone', '')}"
+                "Deseja realmente excluir "
+                "este lead?\n\n"
+
+                f"Nome: "
+                f"{lead_encontrado.get('nome', '')}\n"
+
+                f"Telefone: "
+                f"{lead_encontrado.get('telefone', '')}"
             ),
             parent=janela_busca
         )
@@ -426,12 +679,31 @@ def abrir_busca():
             return
 
         try:
-            excluir_lead(lead_encontrado)
+            criar_backup()
+
+            excluir_lead(
+                lead_encontrado
+            )
 
         except Exception as erro:
             messagebox.showerror(
                 "Erro ao excluir",
-                f"Não foi possível excluir o lead.\n\n{erro}",
+                (
+                    "Não foi possível criar o backup "
+                    "ou excluir o lead."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_busca
+            )
+            return
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao excluir",
+                (
+                    "Não foi possível excluir o lead."
+                    f"\n\n{erro}"
+                ),
                 parent=janela_busca
             )
             return
@@ -439,12 +711,13 @@ def abrir_busca():
         lead_encontrado = None
 
         limpar_resultado()
+        desabilitar_acoes()
 
-        campo_telefone.delete(0, tk.END)
+        campo_telefone.delete(
+            0,
+            tk.END
+        )
         campo_telefone.focus_set()
-
-        botao_editar.configure(state="disabled")
-        botao_excluir.configure(state="disabled")
 
         messagebox.showinfo(
             "Sucesso",
@@ -470,6 +743,28 @@ def abrir_busca():
         state="disabled"
     )
     botao_excluir.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_copiar = ttk.Button(
+        frame_botoes,
+        text="Copiar Resumo",
+        command=copiar_resumo_lead,
+        state="disabled"
+    )
+    botao_copiar.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_whatsapp = ttk.Button(
+        frame_botoes,
+        text="Abrir WhatsApp",
+        command=abrir_whatsapp_lead,
+        state="disabled"
+    )
+    botao_whatsapp.pack(
         side="left",
         padx=5
     )

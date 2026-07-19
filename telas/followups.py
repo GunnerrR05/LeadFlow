@@ -1,10 +1,31 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+from datetime import datetime, timedelta
 
-from servicos.leads import obter_followups
+from servicos.leads import (
+    obter_followups,
+    atualizar_lead,
+)
+
+from componentes.acoes_lead import (
+    copiar_resumo,
+    abrir_whatsapp,
+)
+
+
+STATUS = [
+    "EM ANDAMENTO",
+    "NEGOCIAÇÃO",
+    "DECLINADO",
+    "CONQUISTADO - SUPRIM",
+    "CONQUISTADO - EQUIP",
+    "FUTURA",
+    "CLIENTE ATIVO",
+]
 
 
 COLUNAS = (
+    "prazo",
     "proximo_contato",
     "nome",
     "telefone",
@@ -16,6 +37,7 @@ COLUNAS = (
 
 
 TITULOS = {
+    "prazo": "Prazo",
     "proximo_contato": "Próximo Contato",
     "nome": "Nome",
     "telefone": "Telefone",
@@ -27,6 +49,7 @@ TITULOS = {
 
 
 LARGURAS = {
+    "prazo": 130,
     "proximo_contato": 140,
     "nome": 190,
     "telefone": 140,
@@ -37,10 +60,95 @@ LARGURAS = {
 }
 
 
+def mascara_data(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:8]
+
+    texto = numeros
+
+    if len(numeros) > 2:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:]}"
+        )
+
+    if len(numeros) > 4:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:]}"
+        )
+
+    campo.delete(0, tk.END)
+    campo.insert(0, texto)
+
+def calcular_prazo(valor):
+    texto = str(valor).strip()
+
+    if not texto:
+        return "Sem data"
+
+    formatos = (
+        "%d/%m/%Y",
+        "%d/%m/%Y %H:%M",
+    )
+
+    data_contato = None
+
+    for formato in formatos:
+        try:
+            data_contato = datetime.strptime(
+                texto,
+                formato
+            ).date()
+            break
+
+        except ValueError:
+            continue
+
+    if data_contato is None:
+        return "Data inválida"
+
+    hoje = datetime.now().date()
+
+    diferenca = (
+        data_contato - hoje
+    ).days
+
+    if diferenca < 0:
+        quantidade = abs(diferenca)
+
+        if quantidade == 1:
+            return "1 dia atrasado"
+
+        return f"{quantidade} dias atrasado"
+
+    if diferenca == 0:
+        return "Hoje"
+
+    if diferenca == 1:
+        return "Amanhã"
+
+    return f"Em {diferenca} dias"
+
 def abrir_followups():
+    lead_selecionado = None
+    leads_por_item = {}
+
     janela = tk.Toplevel()
     janela.title("Follow-ups")
-    janela.geometry("1250x650")
+    janela.geometry("1250x700")
+    janela.minsize(1000, 600)
+
+    try:
+        janela.state("zoomed")
+    except tk.TclError:
+        pass
 
     container = ttk.Frame(
         janela,
@@ -74,6 +182,7 @@ def abrir_followups():
         "atrasados": "Atrasados",
         "hoje": "Hoje",
         "proximos": "Próximos",
+        "sem_data": "Sem Data",
         "invalidos": "Data Inválida",
     }
 
@@ -112,7 +221,8 @@ def abrir_followups():
             columns=COLUNAS,
             show="headings",
             yscrollcommand=barra_vertical.set,
-            xscrollcommand=barra_horizontal.set
+            xscrollcommand=barra_horizontal.set,
+            selectmode="browse"
         )
 
         barra_vertical.configure(
@@ -162,13 +272,134 @@ def abrir_followups():
                 width=LARGURAS[coluna],
                 minwidth=90,
                 anchor="w",
-                stretch=False
+                stretch=True
+            )
+
+            tabela.tag_configure(
+                "atrasado",
+                background="#FFDADA"
+            )
+
+            tabela.tag_configure(
+                "hoje",
+                background="#FFF2CC"
+            )
+
+            tabela.tag_configure(
+                "proximo",
+                background="#DDF4DD"
+            )
+
+            tabela.tag_configure(
+                "invalido",
+                background="#E5E5E5"
+            )
+
+            tabela.tag_configure(
+                "sem_data",
+                background="#DDEBFF"
             )
 
         tabelas[chave] = tabela
         frames[chave] = frame
 
+    frame_botoes = ttk.Frame(container)
+    frame_botoes.pack(pady=(12, 0))
+
+    botao_registrar = None
+    botao_copiar = None
+    botao_whatsapp = None
+
+    def desabilitar_registro():
+        if botao_registrar is not None:
+            botao_registrar.configure(
+                state="disabled"
+            )
+
+        if botao_copiar is not None:
+            botao_copiar.configure(
+                state="disabled"
+            )
+
+        if botao_whatsapp is not None:
+            botao_whatsapp.configure(
+                state="disabled"
+            )
+
+    def habilitar_registro():
+        if botao_registrar is not None:
+            botao_registrar.configure(
+                state="normal"
+            )
+
+        if botao_copiar is not None:
+            botao_copiar.configure(
+                state="normal"
+            )
+
+        if botao_whatsapp is not None:
+            botao_whatsapp.configure(
+                state="normal"
+            )
+
+    def limpar_selecao():
+        nonlocal lead_selecionado
+
+        lead_selecionado = None
+
+        for tabela in tabelas.values():
+            selecao = tabela.selection()
+
+            if selecao:
+                tabela.selection_remove(
+                    selecao
+                )
+
+        desabilitar_registro()
+
+    def selecionar_lead(chave_aba):
+        nonlocal lead_selecionado
+
+        tabela_atual = tabelas[chave_aba]
+        selecao = tabela_atual.selection()
+
+        if not selecao:
+            lead_selecionado = None
+            desabilitar_registro()
+            return
+
+        for outra_chave, outra_tabela in tabelas.items():
+            if outra_chave == chave_aba:
+                continue
+
+            outra_selecao = outra_tabela.selection()
+
+            if outra_selecao:
+                outra_tabela.selection_remove(
+                    outra_selecao
+                )
+
+        item_id = selecao[0]
+
+        lead_selecionado = leads_por_item.get(
+            (
+                chave_aba,
+                item_id
+            )
+        )
+
+        if lead_selecionado is None:
+            desabilitar_registro()
+            return
+
+        habilitar_registro()
+
     def carregar():
+        nonlocal leads_por_item
+
+        limpar_selecao()
+        leads_por_item = {}
+
         try:
             grupos = obter_followups()
 
@@ -176,29 +407,88 @@ def abrir_followups():
             messagebox.showerror(
                 "Erro",
                 (
-                    "Não foi possível carregar os follow-ups."
+                    "Não foi possível carregar "
+                    "os follow-ups."
                     f"\n\n{erro}"
                 ),
                 parent=janela
             )
             return
+        
+        tags_grupos = {
+            "atrasados": "atrasado",
+            "hoje": "hoje",
+            "proximos": "proximo",
+            "sem_data": "sem_data",
+            "invalidos": "invalido",
+        }
 
         for chave, tabela in tabelas.items():
             for item in tabela.get_children():
                 tabela.delete(item)
 
-            for lead in grupos[chave]:
+            for indice, lead in enumerate(
+                grupos[chave],
+                start=1
+            ):
+                linha = lead.get("linha")
+
+                if linha is not None:
+                    item_id = str(linha)
+                else:
+                    item_id = (
+                        f"{chave}_{indice}"
+                    )
+
+                leads_por_item[
+                    (
+                        chave,
+                        item_id
+                    )
+                ] = lead
+
                 tabela.insert(
                     "",
                     tk.END,
+                    iid=item_id,
+                    tags=(
+                        tags_grupos[chave],
+                    ),
                     values=(
-                        lead.get("proximo_contato", ""),
-                        lead.get("nome", ""),
-                        lead.get("telefone", ""),
-                        lead.get("status", ""),
-                        lead.get("produto", ""),
-                        lead.get("cidade_uf", ""),
-                        lead.get("consultor", ""),
+                        calcular_prazo(
+                            lead.get(
+                                "proximo_contato",
+                                ""
+                            )
+                        ),
+                        lead.get(
+                            "proximo_contato",
+                            ""
+                        ),
+                        lead.get(
+                            "nome",
+                            ""
+                        ),
+                        lead.get(
+                            "telefone",
+                            ""
+                        ),
+                        lead.get(
+                            "status",
+                            ""
+                        ),
+                        lead.get(
+                            "produto",
+                            ""
+                        ),
+                        lead.get(
+                            "cidade_uf",
+                            ""
+                        ),
+                        lead.get(
+                            "consultor",
+                            ""
+                        ),
                     )
                 )
 
@@ -215,18 +505,549 @@ def abrir_followups():
                 f"Atrasados: {len(grupos['atrasados'])}    |    "
                 f"Hoje: {len(grupos['hoje'])}    |    "
                 f"Próximos: {len(grupos['proximos'])}    |    "
+                f"Sem data: {len(grupos['sem_data'])}    |    "
                 f"Datas inválidas: {len(grupos['invalidos'])}"
             )
         )
 
-    frame_botoes = ttk.Frame(container)
-    frame_botoes.pack(pady=(12, 0))
+    def copiar_resumo_selecionado():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela
+            )
+            return
+
+        try:
+            copiar_resumo(
+                janela,
+                lead_selecionado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao copiar",
+                (
+                    "Não foi possível copiar o resumo."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+            return
+
+        messagebox.showinfo(
+            "Resumo copiado",
+            "O resumo do lead foi copiado.",
+            parent=janela
+        )
+
+
+    def abrir_whatsapp_selecionado():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela
+            )
+            return
+
+        try:
+            abrir_whatsapp(
+                lead_selecionado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao abrir WhatsApp",
+                (
+                    "Não foi possível abrir o WhatsApp."
+                    f"\n\n{erro}"
+                ),
+                parent=janela
+            )
+
+    def abrir_registro_contato():
+        nonlocal lead_selecionado
+
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela
+            )
+            return
+
+        janela_registro = tk.Toplevel(
+            janela
+        )
+        janela_registro.title(
+            "Registrar Contato"
+        )
+        janela_registro.geometry(
+            "720x720"
+        )
+        janela_registro.minsize(
+            650,
+            650
+        )
+        janela_registro.transient(
+            janela
+        )
+        janela_registro.grab_set()
+
+        container_registro = ttk.Frame(
+            janela_registro,
+            padding=20
+        )
+        container_registro.pack(
+            expand=True,
+            fill="both"
+        )
+
+        ttk.Label(
+            container_registro,
+            text="Registrar Contato",
+            font=("Arial", 20, "bold")
+        ).pack(pady=(0, 5))
+
+        ttk.Label(
+            container_registro,
+            text=(
+                f"{lead_selecionado.get('nome', '')}"
+                "  |  "
+                f"{lead_selecionado.get('telefone', '')}"
+            ),
+            font=("Arial", 11)
+        ).pack(pady=(0, 15))
+
+        frame_dados = ttk.Frame(
+            container_registro
+        )
+        frame_dados.pack(
+            fill="x"
+        )
+
+        ttk.Label(
+            frame_dados,
+            text="Status:"
+        ).grid(
+            row=0,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=6
+        )
+
+        campo_status = ttk.Combobox(
+            frame_dados,
+            values=STATUS,
+            state="readonly",
+            width=35
+        )
+        campo_status.grid(
+            row=0,
+            column=1,
+            sticky="ew",
+            padx=5,
+            pady=6
+        )
+        campo_status.set(
+            lead_selecionado.get(
+                "status",
+                "EM ANDAMENTO"
+            )
+        )
+
+        ttk.Label(
+            frame_dados,
+            text="Próximo Contato:"
+        ).grid(
+            row=1,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=6
+        )
+
+        campo_proximo_contato = ttk.Entry(
+            frame_dados,
+            width=38
+        )
+        campo_proximo_contato.grid(
+            row=1,
+            column=1,
+            sticky="ew",
+            padx=5,
+            pady=6
+        )
+        campo_proximo_contato.insert(
+            0,
+            lead_selecionado.get(
+                "proximo_contato",
+                ""
+            )
+        )
+        campo_proximo_contato.bind(
+            "<KeyRelease>",
+            mascara_data
+        )
+
+        def definir_proximo_contato(dias=None):
+            campo_proximo_contato.delete(
+                0,
+                tk.END
+            )
+
+            if dias is None:
+                return
+
+            nova_data = (
+                datetime.now().date()
+                + timedelta(days=dias)
+            )
+
+            campo_proximo_contato.insert(
+                0,
+                nova_data.strftime("%d/%m/%Y")
+            )
+
+        frame_datas_rapidas = ttk.Frame(
+            frame_dados
+        )
+
+        frame_datas_rapidas.grid(
+            row=2,
+            column=1,
+            sticky="w",
+            padx=5,
+            pady=(0, 8)
+        )
+
+
+        ttk.Button(
+            frame_datas_rapidas,
+            text="Hoje",
+            command=lambda: definir_proximo_contato(0)
+        ).pack(
+            side="left",
+            padx=(0, 4)
+        )
+
+
+        ttk.Button(
+            frame_datas_rapidas,
+            text="Amanhã",
+            command=lambda: definir_proximo_contato(1)
+        ).pack(
+            side="left",
+            padx=4
+        )
+
+
+        ttk.Button(
+            frame_datas_rapidas,
+            text="+3 dias",
+            command=lambda: definir_proximo_contato(3)
+        ).pack(
+            side="left",
+            padx=4
+        )
+
+
+        ttk.Button(
+            frame_datas_rapidas,
+            text="+7 dias",
+            command=lambda: definir_proximo_contato(7)
+        ).pack(
+            side="left",
+            padx=4
+        )
+
+
+        ttk.Button(
+            frame_datas_rapidas,
+            text="Limpar",
+            command=lambda: definir_proximo_contato(None)
+        ).pack(
+            side="left",
+            padx=4
+        )
+
+        ttk.Label(
+            frame_dados,
+            text="Última Interação:"
+        ).grid(
+            row=3,
+            column=0,
+            sticky="w",
+            padx=5,
+            pady=6
+        )
+
+        ultima_interacao = (
+            datetime.now().strftime(
+                "%d/%m/%Y %H:%M"
+            )
+        )
+
+        ttk.Label(
+            frame_dados,
+            text=ultima_interacao
+        ).grid(
+            row=3,
+            column=1,
+            sticky="w",
+            padx=5,
+            pady=6
+        )
+
+        frame_dados.columnconfigure(
+            1,
+            weight=1
+        )
+
+        ttk.Label(
+            container_registro,
+            text="Observações anteriores:"
+        ).pack(
+            anchor="w",
+            pady=(15, 5)
+        )
+
+        texto_anterior = tk.Text(
+            container_registro,
+            height=7,
+            wrap="word",
+            font=("Arial", 10)
+        )
+        texto_anterior.pack(
+            fill="both"
+        )
+        texto_anterior.insert(
+            "1.0",
+            lead_selecionado.get(
+                "observacao",
+                ""
+            )
+        )
+        texto_anterior.configure(
+            state="disabled"
+        )
+
+        ttk.Label(
+            container_registro,
+            text="Novo acompanhamento:"
+        ).pack(
+            anchor="w",
+            pady=(15, 5)
+        )
+
+        texto_novo = tk.Text(
+            container_registro,
+            height=8,
+            wrap="word",
+            font=("Arial", 11)
+        )
+        texto_novo.pack(
+            expand=True,
+            fill="both"
+        )
+
+        def salvar_registro():
+            nonlocal lead_selecionado
+
+            novo_acompanhamento = (
+                texto_novo.get(
+                    "1.0",
+                    tk.END
+                ).strip()
+            )
+
+            if not novo_acompanhamento:
+                messagebox.showwarning(
+                    "Campo obrigatório",
+                    (
+                        "Digite uma observação "
+                        "sobre o contato."
+                    ),
+                    parent=janela_registro
+                )
+                texto_novo.focus_set()
+                return
+
+            proximo_contato = (
+                campo_proximo_contato
+                .get()
+                .strip()
+            )
+
+            lead_atualizado = (
+                lead_selecionado.copy()
+            )
+
+            observacao_anterior = str(
+                lead_atualizado.get(
+                    "observacao",
+                    ""
+                )
+            ).strip()
+
+            novo_registro = (
+                f"[{ultima_interacao}]\n"
+                f"{novo_acompanhamento}"
+            )
+
+            if observacao_anterior:
+                observacao_completa = (
+                    f"{observacao_anterior}"
+                    f"\n\n{novo_registro}"
+                )
+            else:
+                observacao_completa = (
+                    novo_registro
+                )
+
+            lead_atualizado[
+                "status"
+            ] = campo_status.get().strip()
+
+            lead_atualizado[
+                "proximo_contato"
+            ] = proximo_contato
+
+            lead_atualizado[
+                "ultima_interacao"
+            ] = ultima_interacao
+
+            lead_atualizado[
+                "observacao"
+            ] = observacao_completa
+
+            try:
+                atualizar_lead(
+                    lead_atualizado
+                )
+
+            except Exception as erro:
+                messagebox.showerror(
+                    "Erro ao registrar",
+                    (
+                        "Não foi possível registrar "
+                        "o contato."
+                        f"\n\n{erro}"
+                    ),
+                    parent=janela_registro
+                )
+                return
+
+            lead_selecionado = None
+
+            janela_registro.destroy()
+            carregar()
+
+            messagebox.showinfo(
+                "Contato registrado",
+                (
+                    "O contato foi registrado "
+                    "com sucesso."
+                ),
+                parent=janela
+            )
+
+        frame_acoes = ttk.Frame(
+            container_registro
+        )
+        frame_acoes.pack(
+            pady=(15, 0)
+        )
+
+        ttk.Button(
+            frame_acoes,
+            text="Salvar Contato",
+            command=salvar_registro
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        ttk.Button(
+            frame_acoes,
+            text="Cancelar",
+            command=janela_registro.destroy
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        texto_novo.bind(
+            "<Control-Return>",
+            lambda evento: salvar_registro()
+        )
+
+        janela_registro.bind(
+            "<Escape>",
+            lambda evento: (
+                janela_registro.destroy()
+            )
+        )
+
+        texto_novo.focus_set()
+
+    for chave, tabela in tabelas.items():
+        tabela.bind(
+            "<<TreeviewSelect>>",
+            lambda evento, chave_aba=chave: (
+                selecionar_lead(chave_aba)
+            )
+        )
+
+        tabela.bind(
+            "<Double-1>",
+            lambda evento: abrir_registro_contato()
+        )
 
     ttk.Button(
         frame_botoes,
         text="Atualizar",
         command=carregar
     ).pack(
+        side="left",
+        padx=5
+    )
+
+    botao_registrar = ttk.Button(
+        frame_botoes,
+        text="Registrar Contato",
+        command=abrir_registro_contato,
+        state="disabled"
+    )
+    botao_registrar.pack(
+        side="left",
+        padx=5
+    )
+
+    botao_copiar = ttk.Button(
+        frame_botoes,
+        text="Copiar Resumo",
+        command=copiar_resumo_selecionado,
+        state="disabled"
+    )
+
+    botao_copiar.pack(
+        side="left",
+        padx=5
+    )
+
+
+    botao_whatsapp = ttk.Button(
+        frame_botoes,
+        text="Abrir WhatsApp",
+        command=abrir_whatsapp_selecionado,
+        state="disabled"
+    )
+
+    botao_whatsapp.pack(
         side="left",
         padx=5
     )
