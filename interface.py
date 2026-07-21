@@ -14,6 +14,23 @@ from servicos.backup import (
 )
 from servicos.leads import obter_followups
 
+from sistema import tratar_erro_tkinter
+
+import sys
+from pathlib import Path
+
+def caminho_recurso(nome_arquivo):
+    """
+    Encontra arquivos tanto durante o desenvolvimento
+    quanto dentro do executável criado pelo PyInstaller.
+    """
+
+    if hasattr(sys, "_MEIPASS"):
+        pasta_base = Path(sys._MEIPASS)
+    else:
+        pasta_base = Path(__file__).resolve().parent
+
+    return pasta_base / nome_arquivo
 
 def centralizar_janela(janela, largura, altura):
     janela.update_idletasks()
@@ -32,12 +49,26 @@ def centralizar_janela(janela, largura, altura):
 def iniciar_interface():
     janela = tk.Tk()
 
+    try:
+        janela.iconbitmap(
+            default=str(
+                caminho_recurso("icone.ico")
+            )
+        )
+    except tk.TclError:
+        pass
+
+    janela.report_callback_exception = (
+        tratar_erro_tkinter
+    )
+
     janela.title("LeadFlow - Gerenciador de Leads")
     centralizar_janela(
         janela,
         500,
         820
     )
+
 
     janela.resizable(False, False)
 

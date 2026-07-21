@@ -1,17 +1,19 @@
+from datetime import date, datetime
+import re
+import unicodedata
+
 from excel import (
     salvar_lead,
     pegar_leads,
-    buscar_lead_por_telefone,
     atualizar_lead as atualizar_lead_excel,
     excluir_lead as excluir_lead_excel,
 )
-from datetime import date, datetime
 
-import re
 
 CAMPOS_LEAD = (
     "proximo_contato",
     "ultima_interacao",
+    "unidade",
     "status",
     "telefone",
     "nome",
@@ -25,15 +27,27 @@ CAMPOS_LEAD = (
 )
 
 
+UNIDADES = [
+    "AMERICANA",
+    "GOIÂNIA",
+    "SANTA CATARINA",
+    "SANTO ANDRÉ",
+    "TAUBATÉ",
+]
+
+
 def _converter_para_texto(valor):
     """
     Converte o valor recebido para texto.
 
-    Também aceita Entry e Combobox do Tkinter,
-    caso algum campo seja enviado diretamente.
+    Também aceita Entry e Combobox
+    do Tkinter.
     """
 
-    if hasattr(valor, "get") and callable(valor.get):
+    if (
+        hasattr(valor, "get")
+        and callable(valor.get)
+    ):
         valor = valor.get()
 
     if valor is None:
@@ -41,13 +55,50 @@ def _converter_para_texto(valor):
 
     return str(valor).strip()
 
-def _normalizar_telefone(valor):
+
+def _normalizar_texto(valor):
     """
-    Remove espaços, parênteses, hífens e outros caracteres.
-    Mantém apenas os números.
+    Remove acentos e converte para maiúsculas.
+
+    Exemplo:
+    NÃO INFORMADO -> NAO INFORMADO
     """
 
-    texto = _converter_para_texto(valor)
+    texto = _converter_para_texto(
+        valor
+    ).upper()
+
+    texto = unicodedata.normalize(
+        "NFD",
+        texto
+    )
+
+    return "".join(
+        caractere
+        for caractere in texto
+        if unicodedata.category(
+            caractere
+        ) != "Mn"
+    )
+
+
+UNIDADES_NORMALIZADAS = {
+    _normalizar_texto(
+        unidade
+    ): unidade
+    for unidade in UNIDADES
+}
+
+
+def _normalizar_telefone(valor):
+    """
+    Mantém apenas os números
+    do telefone.
+    """
+
+    texto = _converter_para_texto(
+        valor
+    )
 
     return "".join(
         caractere
@@ -55,15 +106,26 @@ def _normalizar_telefone(valor):
         if caractere.isdigit()
     )
 
-def _validar_telefone(valor):
-    numeros = _normalizar_telefone(valor)
 
-    if len(numeros) in (10, 11):
+def _validar_telefone(valor):
+    numeros = _normalizar_telefone(
+        valor
+    )
+
+    if len(numeros) in (
+        10,
+        11,
+    ):
         return
 
     if (
-        len(numeros) in (12, 13)
-        and numeros.startswith("55")
+        len(numeros) in (
+            12,
+            13,
+        )
+        and numeros.startswith(
+            "55"
+        )
     ):
         return
 
@@ -74,10 +136,32 @@ def _validar_telefone(valor):
 
 
 def _validar_email(valor):
-    email = _converter_para_texto(valor)
+    email = _converter_para_texto(
+        valor
+    )
 
+    # Mantém compatibilidade com leads antigos
+    # que não possuem e-mail preenchido.
     if not email:
         return
+
+    email_normalizado = (
+        _normalizar_texto(
+            email
+        )
+    )
+
+    if email_normalizado == "NAO INFORMADO":
+        return
+
+    if (
+        email_normalizado
+        == "ESCREVER E-MAIL MANUALMENTE"
+    ):
+        raise ValueError(
+            "Digite o endereço de e-mail ou "
+            "selecione NÃO INFORMADO."
+        )
 
     padrao = (
         r"^[A-Za-z0-9._%+-]+"
@@ -85,14 +169,51 @@ def _validar_email(valor):
         r"\.[A-Za-z]{2,}$"
     )
 
-    if not re.fullmatch(padrao, email):
+    if not re.fullmatch(
+        padrao,
+        email
+    ):
         raise ValueError(
-            "E-mail inválido. Verifique o endereço informado."
+            "E-mail inválido. Digite um endereço "
+            "válido ou selecione NÃO INFORMADO."
         )
 
-def _validar_data(valor, nome_campo, formatos):
+
+def _validar_unidade(valor):
+    unidade = _converter_para_texto(
+        valor
+    )
+
+    # Os leads antigos ficarão inicialmente
+    # sem unidade após a migração.
+    if not unidade:
+        return
+
+    unidade_normalizada = (
+        _normalizar_texto(
+            unidade
+        )
+    )
+
+    if (
+        unidade_normalizada
+        not in UNIDADES_NORMALIZADAS
+    ):
+        raise ValueError(
+            "Unidade inválida. Selecione uma "
+            "das unidades disponíveis."
+        )
+
+
+def _validar_data(
+    valor,
+    nome_campo,
+    formatos
+):
     """
-    Valida uma data usando os formatos permitidos.
+    Valida uma data usando os formatos
+    permitidos.
+
     Campo vazio continua permitido.
     """
 
@@ -101,7 +222,10 @@ def _validar_data(valor, nome_campo, formatos):
 
     for formato in formatos:
         try:
-            datetime.strptime(valor, formato)
+            datetime.strptime(
+                valor,
+                formato
+            )
             return
 
         except ValueError:
@@ -109,11 +233,26 @@ def _validar_data(valor, nome_campo, formatos):
 
     formatos_legiveis = " ou ".join(
         formato
-        .replace("%d", "DD")
-        .replace("%m", "MM")
-        .replace("%Y", "AAAA")
-        .replace("%H", "HH")
-        .replace("%M", "MM")
+        .replace(
+            "%d",
+            "DD"
+        )
+        .replace(
+            "%m",
+            "MM"
+        )
+        .replace(
+            "%Y",
+            "AAAA"
+        )
+        .replace(
+            "%H",
+            "HH"
+        )
+        .replace(
+            "%M",
+            "MM"
+        )
         for formato in formatos
     )
 
@@ -125,30 +264,87 @@ def _validar_data(valor, nome_campo, formatos):
 
 def _preparar_lead(campos):
     """
-    Cria um dicionário limpo com os campos utilizados pelo sistema.
+    Cria um dicionário limpo com os
+    campos utilizados pelo sistema.
     """
 
-    if not isinstance(campos, dict):
+    if not isinstance(
+        campos,
+        dict
+    ):
         raise TypeError(
-            "Os dados do lead precisam ser enviados em um dicionário."
+            "Os dados do lead precisam ser "
+            "enviados em um dicionário."
         )
 
     lead = {}
 
     for campo in CAMPOS_LEAD:
-        lead[campo] = _converter_para_texto(
-            campos.get(campo, "")
+        lead[campo] = (
+            _converter_para_texto(
+                campos.get(
+                    campo,
+                    ""
+                )
+            )
         )
 
     if not lead["status"]:
-        lead["status"] = "EM ANDAMENTO"
+        lead["status"] = (
+            "EM ANDAMENTO"
+        )
+
+    lead["status"] = (
+        lead["status"].upper()
+    )
+
+    # Corrige a ortografia da unidade,
+    # inclusive quando vier sem acento.
+    unidade_normalizada = (
+        _normalizar_texto(
+            lead["unidade"]
+        )
+    )
+
+    if (
+        unidade_normalizada
+        in UNIDADES_NORMALIZADAS
+    ):
+        lead["unidade"] = (
+            UNIDADES_NORMALIZADAS[
+                unidade_normalizada
+            ]
+        )
+
+    # Padroniza a opção sem e-mail.
+    if (
+        _normalizar_texto(
+            lead["email"]
+        )
+        == "NAO INFORMADO"
+    ):
+        lead["email"] = (
+            "NÃO INFORMADO"
+        )
+
+    # Regra central:
+    # lead declinado não terá
+    # próximo contato.
+    if (
+        lead["status"]
+        == "DECLINADO"
+    ):
+        lead[
+            "proximo_contato"
+        ] = ""
 
     return lead
 
 
 def _validar_lead(lead):
     """
-    Valida os campos obrigatórios e as datas.
+    Valida os campos obrigatórios,
+    telefone, e-mail, unidade e datas.
     """
 
     if not lead["nome"]:
@@ -174,8 +370,14 @@ def _validar_lead(lead):
         lead["email"]
     )
 
+    _validar_unidade(
+        lead["unidade"]
+    )
+
     _validar_data(
-        lead["proximo_contato"],
+        lead[
+            "proximo_contato"
+        ],
         "Próximo contato",
         (
             "%d/%m/%Y",
@@ -183,7 +385,9 @@ def _validar_lead(lead):
     )
 
     _validar_data(
-        lead["ultima_interacao"],
+        lead[
+            "ultima_interacao"
+        ],
         "Última interação",
         (
             "%d/%m/%Y",
@@ -195,29 +399,48 @@ def _validar_lead(lead):
 def cadastrar_lead(campos):
     """
     Prepara, valida e salva um novo lead.
+
     Impede telefones duplicados.
     """
 
-    lead = _preparar_lead(campos)
-
-    _validar_lead(lead)
-
-    telefone_novo = _normalizar_telefone(
-        lead["telefone"]
+    lead = _preparar_lead(
+        campos
     )
 
-    for lead_existente in pegar_leads():
+    _validar_lead(
+        lead
+    )
 
-        telefone_existente = _normalizar_telefone(
-            lead_existente.get("telefone", "")
+    telefone_novo = (
+        _normalizar_telefone(
+            lead["telefone"]
+        )
+    )
+
+    for lead_existente in (
+        pegar_leads()
+    ):
+        telefone_existente = (
+            _normalizar_telefone(
+                lead_existente.get(
+                    "telefone",
+                    ""
+                )
+            )
         )
 
-        if telefone_existente == telefone_novo:
+        if (
+            telefone_existente
+            == telefone_novo
+        ):
             raise ValueError(
-                "Já existe um lead cadastrado com esse telefone."
+                "Já existe um lead cadastrado "
+                "com esse telefone."
             )
 
-    linha = salvar_lead(lead)
+    linha = salvar_lead(
+        lead
+    )
 
     lead["linha"] = linha
 
@@ -234,23 +457,33 @@ def listar_leads():
 
 def buscar_lead(telefone):
     """
-    Busca um lead pelo telefone, ignorando formatação.
+    Busca um lead pelo telefone,
+    ignorando a formatação.
     """
 
-    telefone_procurado = _normalizar_telefone(
-        telefone
+    telefone_procurado = (
+        _normalizar_telefone(
+            telefone
+        )
     )
 
     if not telefone_procurado:
         return None
 
     for lead in pegar_leads():
-
-        telefone_lead = _normalizar_telefone(
-            lead.get("telefone", "")
+        telefone_lead = (
+            _normalizar_telefone(
+                lead.get(
+                    "telefone",
+                    ""
+                )
+            )
         )
 
-        if telefone_lead == telefone_procurado:
+        if (
+            telefone_lead
+            == telefone_procurado
+        ):
             return lead
 
     return None
@@ -258,53 +491,89 @@ def buscar_lead(telefone):
 
 def atualizar_lead(lead):
     """
-    Atualiza um lead existente e impede telefone duplicado.
+    Atualiza um lead existente e
+    impede telefone duplicado.
     """
 
-    if not isinstance(lead, dict):
+    if not isinstance(
+        lead,
+        dict
+    ):
         raise TypeError(
-            "Os dados do lead precisam ser enviados em um dicionário."
+            "Os dados do lead precisam ser "
+            "enviados em um dicionário."
         )
 
     if "linha" not in lead:
         raise KeyError(
-            "O lead precisa possuir a informação da linha."
+            "O lead precisa possuir "
+            "a informação da linha."
         )
 
-    linha_atual = int(lead["linha"])
+    linha_atual = int(
+        lead["linha"]
+    )
 
-    lead_atualizado = _preparar_lead(lead)
-    lead_atualizado["linha"] = linha_atual
+    lead_atualizado = (
+        _preparar_lead(
+            lead
+        )
+    )
+
+    lead_atualizado[
+        "linha"
+    ] = linha_atual
 
     if "data_cadastro" in lead:
-        lead_atualizado["data_cadastro"] = (
+        lead_atualizado[
+            "data_cadastro"
+        ] = (
             _converter_para_texto(
-                lead["data_cadastro"]
+                lead[
+                    "data_cadastro"
+                ]
             )
         )
 
-    _validar_lead(lead_atualizado)
-
-    telefone_novo = _normalizar_telefone(
-        lead_atualizado["telefone"]
+    _validar_lead(
+        lead_atualizado
     )
 
-    for lead_existente in pegar_leads():
+    telefone_novo = (
+        _normalizar_telefone(
+            lead_atualizado[
+                "telefone"
+            ]
+        )
+    )
 
+    for lead_existente in (
+        pegar_leads()
+    ):
         linha_existente = int(
-            lead_existente["linha"]
+            lead_existente[
+                "linha"
+            ]
         )
 
-        telefone_existente = _normalizar_telefone(
-            lead_existente.get("telefone", "")
+        telefone_existente = (
+            _normalizar_telefone(
+                lead_existente.get(
+                    "telefone",
+                    ""
+                )
+            )
         )
 
         if (
-            linha_existente != linha_atual
-            and telefone_existente == telefone_novo
+            linha_existente
+            != linha_atual
+            and telefone_existente
+            == telefone_novo
         ):
             raise ValueError(
-                "Já existe outro lead cadastrado com esse telefone."
+                "Já existe outro lead cadastrado "
+                "com esse telefone."
             )
 
     return atualizar_lead_excel(
@@ -314,16 +583,21 @@ def atualizar_lead(lead):
 
 def excluir_lead(lead):
     """
-    Exclui um lead usando a linha armazenada no dicionário.
+    Exclui um lead usando a linha
+    armazenada no dicionário.
 
-    Também aceita diretamente o número da linha.
+    Também aceita diretamente
+    o número da linha.
     """
 
-    if isinstance(lead, dict):
-
+    if isinstance(
+        lead,
+        dict
+    ):
         if "linha" not in lead:
             raise KeyError(
-                "O lead precisa possuir a informação da linha."
+                "O lead precisa possuir "
+                "a informação da linha."
             )
 
         linha = lead["linha"]
@@ -331,32 +605,42 @@ def excluir_lead(lead):
     else:
         linha = lead
 
-    return excluir_lead_excel(int(linha))
+    return excluir_lead_excel(
+        int(linha)
+    )
 
 
-def _converter_data_proximo_contato(valor):
+def _converter_data_proximo_contato(
+    valor
+):
     """
-    Converte o próximo contato para uma data Python.
-    Aceita DD/MM/AAAA e DD/MM/AAAA HH:MM.
+    Converte o próximo contato
+    para uma data Python.
     """
 
-    if isinstance(valor, datetime):
+    if isinstance(
+        valor,
+        datetime
+    ):
         return valor.date()
 
-    if isinstance(valor, date):
+    if isinstance(
+        valor,
+        date
+    ):
         return valor
 
-    texto = _converter_para_texto(valor)
+    texto = _converter_para_texto(
+        valor
+    )
 
     if not texto:
         return None
 
-    formatos = (
+    for formato in (
         "%d/%m/%Y",
         "%d/%m/%Y %H:%M",
-    )
-
-    for formato in formatos:
+    ):
         try:
             return datetime.strptime(
                 texto,
@@ -371,7 +655,13 @@ def _converter_data_proximo_contato(valor):
 
 def obter_followups():
     """
-    Separa os leads por data do próximo contato.
+    Separa os leads por data
+    do próximo contato.
+
+    Leads declinados ficam em Finalizado.
+
+    Leads ativos sem data não aparecem
+    no Follow-up.
     """
 
     hoje = datetime.now().date()
@@ -380,56 +670,142 @@ def obter_followups():
         "atrasados": [],
         "hoje": [],
         "proximos": [],
-        "sem_data": [],
+        "finalizados": [],
         "invalidos": [],
     }
 
     for lead in listar_leads():
-        valor_proximo_contato = _converter_para_texto(
-            lead.get("proximo_contato", "")
-        )
-
         item = lead.copy()
 
-        if not valor_proximo_contato:
-            grupos["sem_data"].append(item)
+        status = (
+            _converter_para_texto(
+                lead.get(
+                    "status",
+                    ""
+                )
+            ).upper()
+        )
+
+        # Declinado sempre aparece
+        # na aba Finalizado.
+        if status == "DECLINADO":
+            grupos[
+                "finalizados"
+            ].append(
+                item
+            )
             continue
 
-        data_contato = _converter_data_proximo_contato(
-            valor_proximo_contato
+        valor_proximo_contato = (
+            _converter_para_texto(
+                lead.get(
+                    "proximo_contato",
+                    ""
+                )
+            )
+        )
+
+        # A aba Sem Data foi removida.
+        # Leads ativos sem data ficam fora
+        # da tela de Follow-up.
+        if not valor_proximo_contato:
+            continue
+
+        data_contato = (
+            _converter_data_proximo_contato(
+                valor_proximo_contato
+            )
         )
 
         if data_contato is None:
-            grupos["invalidos"].append(item)
+            grupos[
+                "invalidos"
+            ].append(
+                item
+            )
             continue
 
-        item["_data_ordenacao"] = data_contato
+        item[
+            "_data_ordenacao"
+        ] = data_contato
 
         if data_contato < hoje:
-            grupos["atrasados"].append(item)
+            grupos[
+                "atrasados"
+            ].append(
+                item
+            )
 
         elif data_contato == hoje:
-            grupos["hoje"].append(item)
+            grupos[
+                "hoje"
+            ].append(
+                item
+            )
 
         else:
-            grupos["proximos"].append(item)
+            grupos[
+                "proximos"
+            ].append(
+                item
+            )
 
-    def ordenar(item):
+    def ordenar_por_data(item):
         return (
-            item["_data_ordenacao"],
-            item.get("nome", "").casefold()
+            item[
+                "_data_ordenacao"
+            ],
+            _converter_para_texto(
+                item.get(
+                    "nome",
+                    ""
+                )
+            ).casefold()
         )
-
-    grupos["atrasados"].sort(key=ordenar)
-    grupos["hoje"].sort(key=ordenar)
-    grupos["proximos"].sort(key=ordenar)
 
     for nome_grupo in (
         "atrasados",
         "hoje",
-        "proximos"
+        "proximos",
     ):
-        for item in grupos[nome_grupo]:
-            item.pop("_data_ordenacao", None)
+        grupos[
+            nome_grupo
+        ].sort(
+            key=ordenar_por_data
+        )
+
+        for item in grupos[
+            nome_grupo
+        ]:
+            item.pop(
+                "_data_ordenacao",
+                None
+            )
+
+    grupos[
+        "finalizados"
+    ].sort(
+        key=lambda item: (
+            _converter_para_texto(
+                item.get(
+                    "nome",
+                    ""
+                )
+            ).casefold()
+        )
+    )
+
+    grupos[
+        "invalidos"
+    ].sort(
+        key=lambda item: (
+            _converter_para_texto(
+                item.get(
+                    "nome",
+                    ""
+                )
+            ).casefold()
+        )
+    )
 
     return grupos

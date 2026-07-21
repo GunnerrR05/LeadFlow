@@ -19,20 +19,85 @@ APLICACOES = [
 ]
 
 
-CAMPOS_CADASTRO = [
-    ("Próximo Contato", "proximo_contato"),
-    ("Última Interação", "ultima_interacao"),
-    ("Status", "status"),
-    ("Telefone", "telefone"),
-    ("Nome", "nome"),
-    ("Produto", "produto"),
-    ("Cidade / UF", "cidade_uf"),
-    ("E-mail", "email"),
-    ("Aplicação", "aplicacao"),
-    ("Origem", "origem"),
-    ("Consultor", "consultor"),
-    ("Observação", "observacao"),
+UNIDADES = [
+    "AMERICANA",
+    "GOIÂNIA",
+    "SANTA CATARINA",
+    "SANTO ANDRÉ",
+    "TAUBATÉ",
 ]
+
+
+OPCAO_EMAIL_MANUAL = (
+    "ESCREVER E-MAIL MANUALMENTE"
+)
+
+OPCAO_EMAIL_NAO_INFORMADO = (
+    "NÃO INFORMADO"
+)
+
+
+OPCOES_EMAIL = [
+    OPCAO_EMAIL_MANUAL,
+    OPCAO_EMAIL_NAO_INFORMADO,
+]
+
+
+CAMPOS_CADASTRO = [
+    (
+        "Próximo Contato",
+        "proximo_contato"
+    ),
+    (
+        "Última Interação",
+        "ultima_interacao"
+    ),
+    (
+        "Unidade",
+        "unidade"
+    ),
+    (
+        "Status",
+        "status"
+    ),
+    (
+        "Telefone",
+        "telefone"
+    ),
+    (
+        "Nome",
+        "nome"
+    ),
+    (
+        "Produto",
+        "produto"
+    ),
+    (
+        "Cidade / UF",
+        "cidade_uf"
+    ),
+    (
+        "E-mail",
+        "email"
+    ),
+    (
+        "Aplicação",
+        "aplicacao"
+    ),
+    (
+        "Origem",
+        "origem"
+    ),
+    (
+        "Consultor",
+        "consultor"
+    ),
+    (
+        "Observação",
+        "observacao"
+    ),
+]
+
 
 def _mascara_data(evento):
     campo = evento.widget
@@ -46,7 +111,10 @@ def _mascara_data(evento):
     texto = numeros
 
     if len(numeros) > 2:
-        texto = f"{numeros[:2]}/{numeros[2:]}"
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:]}"
+        )
 
     if len(numeros) > 4:
         texto = (
@@ -55,8 +123,15 @@ def _mascara_data(evento):
             f"{numeros[4:]}"
         )
 
-    campo.delete(0, tk.END)
-    campo.insert(0, texto)
+    campo.delete(
+        0,
+        tk.END
+    )
+
+    campo.insert(
+        0,
+        texto
+    )
 
 
 def _mascara_data_hora(evento):
@@ -71,7 +146,10 @@ def _mascara_data_hora(evento):
     texto = numeros
 
     if len(numeros) > 2:
-        texto = f"{numeros[:2]}/{numeros[2:]}"
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:]}"
+        )
 
     if len(numeros) > 4:
         texto = (
@@ -97,8 +175,15 @@ def _mascara_data_hora(evento):
             f"{numeros[10:]}"
         )
 
-    campo.delete(0, tk.END)
-    campo.insert(0, texto)
+    campo.delete(
+        0,
+        tk.END
+    )
+
+    campo.insert(
+        0,
+        texto
+    )
 
 
 def mascara_telefone(evento):
@@ -111,7 +196,9 @@ def mascara_telefone(evento):
     )[:11]
 
     if len(numeros) <= 2:
-        texto = f"({numeros}"
+        texto = (
+            f"({numeros}"
+        )
 
     elif len(numeros) <= 6:
         texto = (
@@ -133,8 +220,16 @@ def mascara_telefone(evento):
             f"{numeros[7:]}"
         )
 
-    campo.delete(0, tk.END)
-    campo.insert(0, texto)
+    campo.delete(
+        0,
+        tk.END
+    )
+
+    campo.insert(
+        0,
+        texto
+    )
+
 
 def inserir_quebra_linha(evento):
     evento.widget.insert(
@@ -144,17 +239,11 @@ def inserir_quebra_linha(evento):
 
     return "break"
 
+
 def criar_campos(janela):
     """
-    Cria os campos usados na tela de cadastro.
-
-    Retorna um dicionário no formato:
-    {
-        "nome": Entry,
-        "telefone": Entry,
-        "status": Combobox,
-        ...
-    }
+    Cria e retorna os campos utilizados
+    na tela de cadastro.
     """
 
     campos = {}
@@ -172,7 +261,11 @@ def criar_campos(janela):
     ttk.Label(
         container,
         text="Novo Lead",
-        font=("Arial", 18, "bold")
+        font=(
+            "Arial",
+            18,
+            "bold"
+        )
     ).grid(
         row=0,
         column=0,
@@ -180,16 +273,17 @@ def criar_campos(janela):
         pady=(0, 15)
     )
 
-    for numero_linha, (texto, chave) in enumerate(
+    for numero_linha, (
+        texto,
+        chave
+    ) in enumerate(
         CAMPOS_CADASTRO,
         start=1
     ):
-        label = ttk.Label(
+        ttk.Label(
             container,
             text=f"{texto}:"
-        )
-
-        label.grid(
+        ).grid(
             row=numero_linha,
             column=0,
             sticky="w",
@@ -197,7 +291,17 @@ def criar_campos(janela):
             pady=6
         )
 
-        if chave == "status":
+        if chave == "unidade":
+            campo = ttk.Combobox(
+                container,
+                values=UNIDADES,
+                state="readonly",
+                width=32
+            )
+
+            campo.set("")
+
+        elif chave == "status":
             campo = ttk.Combobox(
                 container,
                 values=STATUS,
@@ -205,7 +309,21 @@ def criar_campos(janela):
                 width=32
             )
 
-            campo.set("EM ANDAMENTO")
+            campo.set(
+                "EM ANDAMENTO"
+            )
+
+        elif chave == "email":
+            campo = ttk.Combobox(
+                container,
+                values=OPCOES_EMAIL,
+                state="normal",
+                width=32
+            )
+
+            campo.set(
+                OPCAO_EMAIL_NAO_INFORMADO
+            )
 
         elif chave == "aplicacao":
             campo = ttk.Combobox(
@@ -215,7 +333,9 @@ def criar_campos(janela):
                 width=32
             )
 
-            campo.set(APLICACOES[0])
+            campo.set(
+                APLICACOES[0]
+            )
 
         elif chave == "observacao":
             campo = tk.Text(
@@ -262,6 +382,80 @@ def criar_campos(janela):
             )
 
         campos[chave] = campo
+
+    def verificar_status(evento=None):
+        """
+        Limpa o próximo contato quando
+        o status for DECLINADO.
+        """
+
+        status = (
+            campos["status"]
+            .get()
+            .strip()
+            .upper()
+        )
+
+        if status == "DECLINADO":
+            campos[
+                "proximo_contato"
+            ].delete(
+                0,
+                tk.END
+            )
+
+    def selecionar_opcao_email(
+        evento=None
+    ):
+        """
+        Ao escolher a opção de escrever
+        manualmente, limpa o combobox e
+        posiciona o cursor para digitação.
+        """
+
+        opcao = (
+            campos["email"]
+            .get()
+            .strip()
+        )
+
+        if (
+            opcao
+            == OPCAO_EMAIL_MANUAL
+        ):
+            campos[
+                "email"
+            ].set("")
+
+            campos[
+                "email"
+            ].focus_set()
+
+            campos[
+                "email"
+            ].icursor(
+                tk.END
+            )
+
+        elif (
+            opcao
+            == OPCAO_EMAIL_NAO_INFORMADO
+        ):
+            campos[
+                "email"
+            ].set(
+                OPCAO_EMAIL_NAO_INFORMADO
+            )
+
+    campos["status"].bind(
+        "<<ComboboxSelected>>",
+        verificar_status
+    )
+
+    campos["email"].bind(
+        "<<ComboboxSelected>>",
+        selecionar_opcao_email
+    )
 
     container.columnconfigure(
         1,

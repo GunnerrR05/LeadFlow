@@ -4,10 +4,17 @@ from tkinter import ttk, messagebox
 from componentes.campos import (
     mascara_telefone,
     inserir_quebra_linha,
+    STATUS,
+    APLICACOES,
+    UNIDADES,
+    OPCOES_EMAIL,
+    OPCAO_EMAIL_MANUAL,
+    OPCAO_EMAIL_NAO_INFORMADO,
 )
 
 from componentes.acoes_lead import (
     copiar_resumo,
+    copiar_whatsapp,
     abrir_whatsapp,
 )
 
@@ -20,35 +27,113 @@ from servicos.leads import (
 from servicos.backup import criar_backup
 
 
-STATUS = [
-    "EM ANDAMENTO",
-    "NEGOCIAÇÃO",
-    "DECLINADO",
-    "CONQUISTADO - SUPRIM",
-    "CONQUISTADO - EQUIP",
-    "FUTURA",
-    "CLIENTE ATIVO",
-]
+def mascara_data(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:8]
+
+    texto = numeros
+
+    if len(numeros) > 2:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:]}"
+        )
+
+    if len(numeros) > 4:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:]}"
+        )
+
+    campo.delete(
+        0,
+        tk.END
+    )
+
+    campo.insert(
+        0,
+        texto
+    )
 
 
-APLICACOES = [
-    "S, F, DTF, DTG E UV",
-    "OUTROS",
-]
+def mascara_data_hora(evento):
+    campo = evento.widget
+
+    numeros = "".join(
+        caractere
+        for caractere in campo.get()
+        if caractere.isdigit()
+    )[:12]
+
+    texto = numeros
+
+    if len(numeros) > 2:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:]}"
+        )
+
+    if len(numeros) > 4:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:]}"
+        )
+
+    if len(numeros) > 8:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:8]} "
+            f"{numeros[8:]}"
+        )
+
+    if len(numeros) > 10:
+        texto = (
+            f"{numeros[:2]}/"
+            f"{numeros[2:4]}/"
+            f"{numeros[4:8]} "
+            f"{numeros[8:10]}:"
+            f"{numeros[10:]}"
+        )
+
+    campo.delete(
+        0,
+        tk.END
+    )
+
+    campo.insert(
+        0,
+        texto
+    )
 
 
 def abrir_busca():
     lead_encontrado = None
 
     janela_busca = tk.Toplevel()
-    janela_busca.title("Buscar Lead")
-    janela_busca.geometry("720x700")
-    janela_busca.resizable(False, False)
+    janela_busca.title(
+        "Buscar Lead"
+    )
+    janela_busca.geometry(
+        "850x760"
+    )
+    janela_busca.resizable(
+        False,
+        False
+    )
 
     container = ttk.Frame(
         janela_busca,
         padding=20
     )
+
     container.pack(
         expand=True,
         fill="both"
@@ -57,11 +142,22 @@ def abrir_busca():
     ttk.Label(
         container,
         text="Buscar Lead",
-        font=("Arial", 20, "bold")
-    ).pack(pady=(0, 20))
+        font=(
+            "Arial",
+            20,
+            "bold"
+        )
+    ).pack(
+        pady=(0, 20)
+    )
 
-    frame_busca = ttk.Frame(container)
-    frame_busca.pack(fill="x")
+    frame_busca = ttk.Frame(
+        container
+    )
+
+    frame_busca.pack(
+        fill="x"
+    )
 
     ttk.Label(
         frame_busca,
@@ -75,6 +171,7 @@ def abrir_busca():
         frame_busca,
         width=30
     )
+
     campo_telefone.pack(
         side="left",
         padx=(0, 8)
@@ -87,36 +184,82 @@ def abrir_busca():
 
     resultado = tk.Text(
         container,
-        height=25,
-        width=80,
+        height=27,
+        width=90,
         wrap="word"
     )
+
     resultado.pack(
         fill="both",
         expand=True,
         pady=20
     )
-    resultado.configure(state="disabled")
 
-    frame_botoes = ttk.Frame(container)
+    resultado.configure(
+        state="disabled"
+    )
+
+    frame_botoes = ttk.Frame(
+        container
+    )
+
     frame_botoes.pack()
 
     def limpar_resultado():
-        resultado.configure(state="normal")
-        resultado.delete("1.0", tk.END)
-        resultado.configure(state="disabled")
+        resultado.configure(
+            state="normal"
+        )
+
+        resultado.delete(
+            "1.0",
+            tk.END
+        )
+
+        resultado.configure(
+            state="disabled"
+        )
 
     def habilitar_acoes():
-        botao_editar.configure(state="normal")
-        botao_excluir.configure(state="normal")
-        botao_copiar.configure(state="normal")
-        botao_whatsapp.configure(state="normal")
+        botao_editar.configure(
+            state="normal"
+        )
+
+        botao_excluir.configure(
+            state="normal"
+        )
+
+        botao_copiar_resumo.configure(
+            state="normal"
+        )
+
+        botao_copiar_whatsapp.configure(
+            state="normal"
+        )
+
+        botao_whatsapp.configure(
+            state="normal"
+        )
 
     def desabilitar_acoes():
-        botao_editar.configure(state="disabled")
-        botao_excluir.configure(state="disabled")
-        botao_copiar.configure(state="disabled")
-        botao_whatsapp.configure(state="disabled")
+        botao_editar.configure(
+            state="disabled"
+        )
+
+        botao_excluir.configure(
+            state="disabled"
+        )
+
+        botao_copiar_resumo.configure(
+            state="disabled"
+        )
+
+        botao_copiar_whatsapp.configure(
+            state="disabled"
+        )
+
+        botao_whatsapp.configure(
+            state="disabled"
+        )
 
     def mostrar_lead(lead):
         limpar_resultado()
@@ -130,6 +273,9 @@ def abrir_busca():
 
             f"Última Interação: "
             f"{lead.get('ultima_interacao', '')}\n"
+
+            f"Unidade: "
+            f"{lead.get('unidade', '')}\n"
 
             f"Status: "
             f"{lead.get('status', '')}\n\n"
@@ -168,9 +314,18 @@ def abrir_busca():
             f"{lead.get('whatsapp', '')}"
         )
 
-        resultado.configure(state="normal")
-        resultado.insert("1.0", texto)
-        resultado.configure(state="disabled")
+        resultado.configure(
+            state="normal"
+        )
+
+        resultado.insert(
+            "1.0",
+            texto
+        )
+
+        resultado.configure(
+            state="disabled"
+        )
 
     def copiar_resumo_lead():
         if lead_encontrado is None:
@@ -191,7 +346,8 @@ def abrir_busca():
             messagebox.showerror(
                 "Erro ao copiar",
                 (
-                    "Não foi possível copiar o resumo."
+                    "Não foi possível copiar "
+                    "o resumo."
                     f"\n\n{erro}"
                 ),
                 parent=janela_busca
@@ -200,7 +356,46 @@ def abrir_busca():
 
         messagebox.showinfo(
             "Resumo copiado",
-            "O resumo do lead foi copiado.",
+            (
+                "O resumo do lead "
+                "foi copiado."
+            ),
+            parent=janela_busca
+        )
+
+    def copiar_whatsapp_lead():
+        if lead_encontrado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Busque um lead primeiro.",
+                parent=janela_busca
+            )
+            return
+
+        try:
+            copiar_whatsapp(
+                janela_busca,
+                lead_encontrado
+            )
+
+        except Exception as erro:
+            messagebox.showerror(
+                "Erro ao copiar",
+                (
+                    "Não foi possível copiar "
+                    "o nome do WhatsApp."
+                    f"\n\n{erro}"
+                ),
+                parent=janela_busca
+            )
+            return
+
+        messagebox.showinfo(
+            "WhatsApp copiado",
+            (
+                "O nome para o WhatsApp "
+                "foi copiado."
+            ),
             parent=janela_busca
         )
 
@@ -222,7 +417,8 @@ def abrir_busca():
             messagebox.showerror(
                 "Erro ao abrir WhatsApp",
                 (
-                    "Não foi possível abrir o WhatsApp."
+                    "Não foi possível abrir "
+                    "o WhatsApp."
                     f"\n\n{erro}"
                 ),
                 parent=janela_busca
@@ -231,7 +427,11 @@ def abrir_busca():
     def buscar():
         nonlocal lead_encontrado
 
-        telefone = campo_telefone.get().strip()
+        telefone = (
+            campo_telefone
+            .get()
+            .strip()
+        )
 
         if not telefone:
             messagebox.showwarning(
@@ -239,12 +439,15 @@ def abrir_busca():
                 "Digite o telefone do lead.",
                 parent=janela_busca
             )
+
             campo_telefone.focus_set()
             return
 
         try:
-            lead_encontrado = buscar_lead(
-                telefone
+            lead_encontrado = (
+                buscar_lead(
+                    telefone
+                )
             )
 
         except Exception as erro:
@@ -256,7 +459,8 @@ def abrir_busca():
             messagebox.showerror(
                 "Erro na busca",
                 (
-                    "Não foi possível buscar o lead."
+                    "Não foi possível buscar "
+                    "o lead."
                     f"\n\n{erro}"
                 ),
                 parent=janela_busca
@@ -288,9 +492,14 @@ def abrir_busca():
         text="Buscar",
         command=buscar
     )
-    botao_buscar.pack(side="left")
+
+    botao_buscar.pack(
+        side="left"
+    )
 
     def editar():
+        nonlocal lead_encontrado
+
         if lead_encontrado is None:
             messagebox.showwarning(
                 "Atenção",
@@ -302,21 +511,31 @@ def abrir_busca():
         janela_editar = tk.Toplevel(
             janela_busca
         )
-        janela_editar.title("Editar Lead")
-        janela_editar.geometry("520x830")
+
+        janela_editar.title(
+            "Editar Lead"
+        )
+
+        janela_editar.geometry(
+            "540x930"
+        )
+
         janela_editar.resizable(
             False,
             False
         )
+
         janela_editar.transient(
             janela_busca
         )
+
         janela_editar.grab_set()
 
         container_edicao = ttk.Frame(
             janela_editar,
             padding=20
         )
+
         container_edicao.pack(
             expand=True,
             fill="both"
@@ -325,7 +544,11 @@ def abrir_busca():
         ttk.Label(
             container_edicao,
             text="Editar Lead",
-            font=("Arial", 18, "bold")
+            font=(
+                "Arial",
+                18,
+                "bold"
+            )
         ).grid(
             row=0,
             column=0,
@@ -370,6 +593,10 @@ def abrir_busca():
                 "ultima_interacao"
             ),
             (
+                "Unidade",
+                "unidade"
+            ),
+            (
                 "Status",
                 "status"
             ),
@@ -411,7 +638,10 @@ def abrir_busca():
             ),
         ]
 
-        for linha, (texto, chave) in enumerate(
+        for linha, (
+            texto,
+            chave
+        ) in enumerate(
             campos,
             start=2
         ):
@@ -426,7 +656,26 @@ def abrir_busca():
                 pady=5
             )
 
-            if chave == "status":
+            valor_atual = (
+                lead_encontrado.get(
+                    chave,
+                    ""
+                )
+            )
+
+            if chave == "unidade":
+                campo = ttk.Combobox(
+                    container_edicao,
+                    values=UNIDADES,
+                    state="readonly",
+                    width=35
+                )
+
+                campo.set(
+                    valor_atual
+                )
+
+            elif chave == "status":
                 campo = ttk.Combobox(
                     container_edicao,
                     values=STATUS,
@@ -435,10 +684,21 @@ def abrir_busca():
                 )
 
                 campo.set(
-                    lead_encontrado.get(
-                        chave,
-                        "EM ANDAMENTO"
-                    )
+                    valor_atual
+                    or "EM ANDAMENTO"
+                )
+
+            elif chave == "email":
+                campo = ttk.Combobox(
+                    container_edicao,
+                    values=OPCOES_EMAIL,
+                    state="normal",
+                    width=35
+                )
+
+                campo.set(
+                    valor_atual
+                    or OPCAO_EMAIL_NAO_INFORMADO
                 )
 
             elif chave == "aplicacao":
@@ -450,10 +710,8 @@ def abrir_busca():
                 )
 
                 campo.set(
-                    lead_encontrado.get(
-                        chave,
-                        APLICACOES[0]
-                    )
+                    valor_atual
+                    or APLICACOES[0]
                 )
 
             elif chave == "observacao":
@@ -466,23 +724,12 @@ def abrir_busca():
 
                 campo.insert(
                     "1.0",
-                    lead_encontrado.get(
-                        chave,
-                        ""
-                    )
+                    valor_atual
                 )
 
                 campo.bind(
                     "<Shift-Return>",
                     inserir_quebra_linha
-                )
-
-                campo.insert(
-                    "1.0",
-                    lead_encontrado.get(
-                        chave,
-                        ""
-                    )
                 )
 
             else:
@@ -493,10 +740,7 @@ def abrir_busca():
 
                 campo.insert(
                     0,
-                    lead_encontrado.get(
-                        chave,
-                        ""
-                    )
+                    valor_atual
                 )
 
             campo.grid(
@@ -513,7 +757,94 @@ def abrir_busca():
                     mascara_telefone
                 )
 
-            campos_edicao[chave] = campo
+            elif chave == "proximo_contato":
+                campo.bind(
+                    "<KeyRelease>",
+                    mascara_data
+                )
+
+            elif chave == "ultima_interacao":
+                campo.bind(
+                    "<KeyRelease>",
+                    mascara_data_hora
+                )
+
+            campos_edicao[
+                chave
+            ] = campo
+
+        def verificar_status(
+            evento=None
+        ):
+            status = (
+                campos_edicao[
+                    "status"
+                ]
+                .get()
+                .strip()
+                .upper()
+            )
+
+            if status == "DECLINADO":
+                campos_edicao[
+                    "proximo_contato"
+                ].delete(
+                    0,
+                    tk.END
+                )
+
+        def selecionar_email(
+            evento=None
+        ):
+            opcao = (
+                campos_edicao[
+                    "email"
+                ]
+                .get()
+                .strip()
+            )
+
+            if (
+                opcao
+                == OPCAO_EMAIL_MANUAL
+            ):
+                campos_edicao[
+                    "email"
+                ].set("")
+
+                campos_edicao[
+                    "email"
+                ].focus_set()
+
+                campos_edicao[
+                    "email"
+                ].icursor(
+                    tk.END
+                )
+
+            elif (
+                opcao
+                == OPCAO_EMAIL_NAO_INFORMADO
+            ):
+                campos_edicao[
+                    "email"
+                ].set(
+                    OPCAO_EMAIL_NAO_INFORMADO
+                )
+
+        campos_edicao[
+            "status"
+        ].bind(
+            "<<ComboboxSelected>>",
+            verificar_status
+        )
+
+        campos_edicao[
+            "email"
+        ].bind(
+            "<<ComboboxSelected>>",
+            selecionar_email
+        )
 
         container_edicao.columnconfigure(
             1,
@@ -527,20 +858,32 @@ def abrir_busca():
                 lead_encontrado.copy()
             )
 
-            for chave, campo in campos_edicao.items():
-
-                if isinstance(campo, tk.Text):
-                    dados_atualizados[chave] = campo.get(
+            for chave, campo in (
+                campos_edicao.items()
+            ):
+                if isinstance(
+                    campo,
+                    tk.Text
+                ):
+                    dados_atualizados[
+                        chave
+                    ] = campo.get(
                         "1.0",
                         tk.END
                     ).strip()
 
                 else:
-                    dados_atualizados[chave] = (
-                        campo.get().strip()
+                    dados_atualizados[
+                        chave
+                    ] = (
+                        campo
+                        .get()
+                        .strip()
                     )
 
-            if not dados_atualizados["nome"]:
+            if not dados_atualizados[
+                "nome"
+            ]:
                 messagebox.showwarning(
                     "Campo obrigatório",
                     "Informe o nome do lead.",
@@ -553,7 +896,9 @@ def abrir_busca():
 
                 return
 
-            if not dados_atualizados["telefone"]:
+            if not dados_atualizados[
+                "telefone"
+            ]:
                 messagebox.showwarning(
                     "Campo obrigatório",
                     "Informe o telefone do lead.",
@@ -566,7 +911,9 @@ def abrir_busca():
 
                 return
 
-            if not dados_atualizados["produto"]:
+            if not dados_atualizados[
+                "produto"
+            ]:
                 messagebox.showwarning(
                     "Campo obrigatório",
                     "Informe o produto.",
@@ -580,20 +927,17 @@ def abrir_busca():
                 return
 
             try:
-                atualizar_lead(
-                    dados_atualizados
+                lead_atualizado = (
+                    atualizar_lead(
+                        dados_atualizados
+                    )
                 )
 
-                lead_atualizado = buscar_lead(
-                    dados_atualizados[
-                        "telefone"
-                    ]
-                )
-
-                if lead_atualizado is not None:
+                if lead_atualizado:
                     lead_encontrado = (
                         lead_atualizado
                     )
+
                 else:
                     lead_encontrado = (
                         dados_atualizados
@@ -611,10 +955,6 @@ def abrir_busca():
                 )
                 return
 
-            mostrar_lead(
-                lead_encontrado
-            )
-
             campo_telefone.delete(
                 0,
                 tk.END
@@ -628,11 +968,16 @@ def abrir_busca():
                 )
             )
 
-            habilitar_acoes()
+            mostrar_lead(
+                lead_encontrado
+            )
 
             messagebox.showinfo(
                 "Sucesso",
-                "Lead atualizado com sucesso!",
+                (
+                    "Lead atualizado "
+                    "com sucesso!"
+                ),
                 parent=janela_editar
             )
 
@@ -660,19 +1005,21 @@ def abrir_busca():
             )
             return
 
-        confirmacao = messagebox.askyesno(
-            "Excluir Lead",
-            (
-                "Deseja realmente excluir "
-                "este lead?\n\n"
+        confirmacao = (
+            messagebox.askyesno(
+                "Excluir Lead",
+                (
+                    "Deseja realmente excluir "
+                    "este lead?\n\n"
 
-                f"Nome: "
-                f"{lead_encontrado.get('nome', '')}\n"
+                    f"Nome: "
+                    f"{lead_encontrado.get('nome', '')}\n"
 
-                f"Telefone: "
-                f"{lead_encontrado.get('telefone', '')}"
-            ),
-            parent=janela_busca
+                    f"Telefone: "
+                    f"{lead_encontrado.get('telefone', '')}"
+                ),
+                parent=janela_busca
+            )
         )
 
         if not confirmacao:
@@ -697,17 +1044,6 @@ def abrir_busca():
             )
             return
 
-        except Exception as erro:
-            messagebox.showerror(
-                "Erro ao excluir",
-                (
-                    "Não foi possível excluir o lead."
-                    f"\n\n{erro}"
-                ),
-                parent=janela_busca
-            )
-            return
-
         lead_encontrado = None
 
         limpar_resultado()
@@ -717,11 +1053,15 @@ def abrir_busca():
             0,
             tk.END
         )
+
         campo_telefone.focus_set()
 
         messagebox.showinfo(
             "Sucesso",
-            "Lead excluído com sucesso!",
+            (
+                "Lead excluído "
+                "com sucesso!"
+            ),
             parent=janela_busca
         )
 
@@ -731,9 +1071,10 @@ def abrir_busca():
         command=editar,
         state="disabled"
     )
+
     botao_editar.pack(
         side="left",
-        padx=5
+        padx=4
     )
 
     botao_excluir = ttk.Button(
@@ -742,20 +1083,34 @@ def abrir_busca():
         command=excluir,
         state="disabled"
     )
+
     botao_excluir.pack(
         side="left",
-        padx=5
+        padx=4
     )
 
-    botao_copiar = ttk.Button(
+    botao_copiar_resumo = ttk.Button(
         frame_botoes,
         text="Copiar Resumo",
         command=copiar_resumo_lead,
         state="disabled"
     )
-    botao_copiar.pack(
+
+    botao_copiar_resumo.pack(
         side="left",
-        padx=5
+        padx=4
+    )
+
+    botao_copiar_whatsapp = ttk.Button(
+        frame_botoes,
+        text="Copiar WhatsApp",
+        command=copiar_whatsapp_lead,
+        state="disabled"
+    )
+
+    botao_copiar_whatsapp.pack(
+        side="left",
+        padx=4
     )
 
     botao_whatsapp = ttk.Button(
@@ -764,9 +1119,10 @@ def abrir_busca():
         command=abrir_whatsapp_lead,
         state="disabled"
     )
+
     botao_whatsapp.pack(
         side="left",
-        padx=5
+        padx=4
     )
 
     janela_busca.bind(
