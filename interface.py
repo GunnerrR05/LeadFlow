@@ -17,7 +17,6 @@ from servicos.leads import obter_followups
 
 from sistema import tratar_erro_tkinter
 from tema import CINZA_CLARO, aplicar_tema
-
 import sys
 from pathlib import Path
 
