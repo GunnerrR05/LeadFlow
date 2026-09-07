@@ -1,6 +1,6 @@
-# LeadFlow
+# Zarken Leads
 
-Sistema de gerenciamento de leads desenvolvido em Python.
+Sistema Zarken para gerenciamento de leads comerciais.
 
 ## Funcionalidades
 
@@ -21,7 +21,7 @@ Sistema de gerenciamento de leads desenvolvido em Python.
 ## Como executar
 
 ```bash
-python interface.py
+python main.py
 ```
 
 ## Autor

@@ -17,6 +17,7 @@ from componentes.acoes_lead import (
     copiar_whatsapp,
     abrir_whatsapp,
 )
+from componentes.detalhes_lead import PainelDetalhesLead
 
 from servicos.leads import (
     buscar_lead,
@@ -122,16 +123,23 @@ def abrir_busca():
         "Buscar Lead"
     )
     janela_busca.geometry(
-        "850x760"
+        "1100x780"
     )
-    janela_busca.resizable(
-        False,
-        False
+    janela_busca.minsize(
+        900,
+        650
     )
+
+    try:
+        janela_busca.state(
+            "zoomed"
+        )
+    except tk.TclError:
+        pass
 
     container = ttk.Frame(
         janela_busca,
-        padding=20
+        padding=10
     )
 
     container.pack(
@@ -144,19 +152,22 @@ def abrir_busca():
         text="Buscar Lead",
         font=(
             "Arial",
-            20,
+            18,
             "bold"
         )
     ).pack(
-        pady=(0, 20)
+        pady=(0, 10)
     )
 
-    frame_busca = ttk.Frame(
-        container
+    frame_busca = ttk.LabelFrame(
+        container,
+        text="Localizar lead",
+        padding=10
     )
 
     frame_busca.pack(
-        fill="x"
+        fill="x",
+        pady=(0, 10)
     )
 
     ttk.Label(
@@ -182,42 +193,37 @@ def abrir_busca():
         mascara_telefone
     )
 
-    resultado = tk.Text(
+    frame_resultado = ttk.LabelFrame(
         container,
-        height=27,
-        width=90,
-        wrap="word"
+        text="Dados do lead encontrado",
+        padding=8
     )
 
-    resultado.pack(
+    frame_resultado.pack(
+        fill="both",
+        expand=True
+    )
+
+    painel_detalhes = PainelDetalhesLead(
+        frame_resultado
+    )
+
+    painel_detalhes.pack(
         fill="both",
         expand=True,
-        pady=20
-    )
-
-    resultado.configure(
-        state="disabled"
+        pady=0,
     )
 
     frame_botoes = ttk.Frame(
         container
     )
 
-    frame_botoes.pack()
+    frame_botoes.pack(
+        pady=(12, 0)
+    )
 
     def limpar_resultado():
-        resultado.configure(
-            state="normal"
-        )
-
-        resultado.delete(
-            "1.0",
-            tk.END
-        )
-
-        resultado.configure(
-            state="disabled"
-        )
+        painel_detalhes.limpar()
 
     def habilitar_acoes():
         botao_editar.configure(
@@ -262,70 +268,7 @@ def abrir_busca():
         )
 
     def mostrar_lead(lead):
-        limpar_resultado()
-
-        texto = (
-            f"Data de Cadastro: "
-            f"{lead.get('data_cadastro', '')}\n\n"
-
-            f"Próximo Contato: "
-            f"{lead.get('proximo_contato', '')}\n"
-
-            f"Última Interação: "
-            f"{lead.get('ultima_interacao', '')}\n"
-
-            f"Unidade: "
-            f"{lead.get('unidade', '')}\n"
-
-            f"Status: "
-            f"{lead.get('status', '')}\n\n"
-
-            f"Telefone: "
-            f"{lead.get('telefone', '')}\n"
-
-            f"Nome: "
-            f"{lead.get('nome', '')}\n"
-
-            f"Produto: "
-            f"{lead.get('produto', '')}\n"
-
-            f"Cidade / UF: "
-            f"{lead.get('cidade_uf', '')}\n"
-
-            f"E-mail: "
-            f"{lead.get('email', '')}\n"
-
-            f"Aplicação: "
-            f"{lead.get('aplicacao', '')}\n"
-
-            f"Origem: "
-            f"{lead.get('origem', '')}\n"
-
-            f"Consultor: "
-            f"{lead.get('consultor', '')}\n"
-
-            f"Observação: "
-            f"{lead.get('observacao', '')}\n\n"
-
-            f"Resumo:\n"
-            f"{lead.get('resumo', '')}\n\n"
-
-            f"Nome no WhatsApp:\n"
-            f"{lead.get('whatsapp', '')}"
-        )
-
-        resultado.configure(
-            state="normal"
-        )
-
-        resultado.insert(
-            "1.0",
-            texto
-        )
-
-        resultado.configure(
-            state="disabled"
-        )
+        painel_detalhes.exibir(lead)
 
     def copiar_resumo_lead():
         if lead_encontrado is None:
@@ -972,16 +915,16 @@ def abrir_busca():
                 lead_encontrado
             )
 
+            janela_editar.destroy()
+
             messagebox.showinfo(
                 "Sucesso",
                 (
                     "Lead atualizado "
                     "com sucesso!"
                 ),
-                parent=janela_editar
+                parent=janela_busca
             )
-
-            janela_editar.destroy()
 
         ttk.Button(
             container_edicao,
@@ -1121,6 +1064,15 @@ def abrir_busca():
     )
 
     botao_whatsapp.pack(
+        side="left",
+        padx=4
+    )
+
+    ttk.Button(
+        frame_botoes,
+        text="Fechar",
+        command=janela_busca.destroy
+    ).pack(
         side="left",
         padx=4
     )

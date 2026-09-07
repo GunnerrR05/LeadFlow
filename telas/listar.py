@@ -1,4 +1,5 @@
 import tkinter as tk
+from functools import partial
 from tkinter import (
     ttk,
     messagebox,
@@ -29,6 +30,47 @@ from servicos.leads import (
 
 from servicos.backup import criar_backup
 from servicos.exportacao import exportar_leads
+from tema import aplicar_tema_carteira
+
+
+_ttk_padrao = ttk
+
+
+class _ComponentesCarteira:
+    """Cria componentes ttk usando apenas os estilos da carteira."""
+
+    Frame = partial(
+        _ttk_padrao.Frame,
+        style="Carteira.TFrame",
+    )
+    Label = partial(
+        _ttk_padrao.Label,
+        style="Carteira.TLabel",
+    )
+    LabelFrame = partial(
+        _ttk_padrao.LabelFrame,
+        style="Carteira.TLabelframe",
+    )
+    Button = partial(
+        _ttk_padrao.Button,
+        style="Carteira.TButton",
+    )
+    Entry = partial(
+        _ttk_padrao.Entry,
+        style="Carteira.TEntry",
+    )
+    Combobox = partial(
+        _ttk_padrao.Combobox,
+        style="Carteira.TCombobox",
+    )
+    Treeview = partial(
+        _ttk_padrao.Treeview,
+        style="Carteira.Treeview",
+    )
+    Scrollbar = _ttk_padrao.Scrollbar
+
+
+ttk = _ComponentesCarteira()
 
 
 STATUS = [
@@ -124,6 +166,9 @@ def abrir_lista():
     botao_status_rapido = None
 
     janela_lista = tk.Toplevel()
+    aplicar_tema_carteira(
+        _ttk_padrao.Style(janela_lista)
+    )
     janela_lista.title(
         "Leads Cadastrados"
     )

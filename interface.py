@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
+from config import NOME_APLICACAO
 from telas.cadastro import abrir_cadastro
 from telas.buscar import abrir_busca
 from telas.listar import abrir_lista
@@ -15,9 +16,27 @@ from servicos.backup import (
 from servicos.leads import obter_followups
 
 from sistema import tratar_erro_tkinter
+from tema import CINZA_CLARO, aplicar_tema
 
 import sys
 from pathlib import Path
+
+
+ID_APLICATIVO_WINDOWS = "ZarkenLeads.GestaoDeLeads"
+
+
+def configurar_identidade_windows():
+    if sys.platform != "win32":
+        return
+
+    try:
+        import ctypes
+
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+            ID_APLICATIVO_WINDOWS
+        )
+    except (AttributeError, OSError):
+        pass
 
 def caminho_recurso(nome_arquivo):
     """
@@ -47,50 +66,77 @@ def centralizar_janela(janela, largura, altura):
 
 
 def iniciar_interface():
+    configurar_identidade_windows()
+
     janela = tk.Tk()
+    janela.configure(
+        background=CINZA_CLARO
+    )
+
+    logo_zarken = None
+    caminho_icone = caminho_recurso(
+        "zarken-leads.ico"
+    )
 
     try:
         janela.iconbitmap(
-            default=str(
-                caminho_recurso("icone.ico")
-            )
+            str(caminho_icone)
+        )
+        janela.iconbitmap(
+            default=str(caminho_icone)
         )
     except tk.TclError:
         pass
+
+    try:
+        logo_zarken = tk.PhotoImage(
+            file=str(
+                caminho_recurso(
+                    "assets/brand/zarken-symbol-64.png"
+                )
+            )
+        )
+        janela.iconphoto(
+            True,
+            logo_zarken
+        )
+        janela.logo_zarken = logo_zarken
+    except tk.TclError:
+        logo_zarken = None
 
     janela.report_callback_exception = (
         tratar_erro_tkinter
     )
 
-    janela.title("LeadFlow - Gerenciador de Leads")
+    janela.title(
+        f"{NOME_APLICACAO} - Gestão de Leads"
+    )
     centralizar_janela(
         janela,
         500,
-        820
+        850
     )
 
 
     janela.resizable(False, False)
 
     estilo = ttk.Style(janela)
-
-    if "clam" in estilo.theme_names():
-        estilo.theme_use("clam")
+    aplicar_tema(estilo)
 
     estilo.configure(
         "Titulo.TLabel",
-        font=("Arial", 24, "bold")
+        font=("Segoe UI", 22, "bold")
     )
 
     estilo.configure(
         "Subtitulo.TLabel",
-        font=("Arial", 11)
+        font=("Segoe UI", 10)
     )
 
     estilo.configure(
         "Menu.TButton",
-        font=("Arial", 11),
-        padding=10
+        font=("Segoe UI", 10),
+        padding=7
     )
 
     container = ttk.Frame(
@@ -103,21 +149,46 @@ def iniciar_interface():
         fill="both"
     )
 
-    titulo = ttk.Label(
-        container,
-        text="Sistema de Leads",
+    cabecalho = ttk.Frame(
+        container
+    )
+
+    cabecalho.pack(
+        pady=(4, 18)
+    )
+
+    if logo_zarken is not None:
+        ttk.Label(
+            cabecalho,
+            image=logo_zarken
+        ).pack(
+            side="left",
+            padx=(0, 14)
+        )
+
+    textos_cabecalho = ttk.Frame(
+        cabecalho
+    )
+    textos_cabecalho.pack(
+        side="left"
+    )
+
+    ttk.Label(
+        textos_cabecalho,
+        text=NOME_APLICACAO,
         style="Titulo.TLabel"
+    ).pack(
+        anchor="w"
     )
 
-    titulo.pack(pady=(20, 5))
-
-    subtitulo = ttk.Label(
-        container,
-        text="Gerenciamento de contatos comerciais",
+    ttk.Label(
+        textos_cabecalho,
+        text="Cada lead, uma nova oportunidade.",
         style="Subtitulo.TLabel"
+    ).pack(
+        anchor="w",
+        pady=(3, 0)
     )
-
-    subtitulo.pack(pady=(0, 30))
 
     def fazer_backup():
         try:
@@ -357,7 +428,7 @@ def iniciar_interface():
     def fechar_programa():
         confirmacao = messagebox.askyesno(
             "Fechar programa",
-            "Deseja realmente fechar o LeadFlow?",
+            f"Deseja realmente fechar o {NOME_APLICACAO}?",
             parent=janela
         )
 
@@ -376,8 +447,8 @@ def iniciar_interface():
 
     rodape = ttk.Label(
         container,
-        text="LeadFlow",
-        font=("Arial", 9)
+        text=NOME_APLICACAO,
+        font=("Segoe UI", 9)
     )
 
     rodape.pack(

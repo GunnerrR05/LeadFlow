@@ -4,6 +4,7 @@ from tkinter import messagebox
 
 from excel import criar_planilha
 from interface import iniciar_interface
+from config import NOME_APLICACAO
 
 from sistema import (
     adquirir_bloqueio_instancia,
@@ -18,9 +19,9 @@ def mostrar_programa_aberto():
     janela_aviso.withdraw()
 
     messagebox.showwarning(
-        "LeadFlow já está aberto",
+        f"{NOME_APLICACAO} já está aberto",
         (
-            "O LeadFlow já está sendo executado.\n\n"
+            f"O {NOME_APLICACAO} já está sendo executado.\n\n"
             "Feche a janela que já está aberta "
             "antes de iniciar novamente."
         ),
@@ -43,7 +44,7 @@ def main():
 
     except Exception as erro:
         registrar_erro(
-            "Erro fatal ao iniciar o LeadFlow.",
+            f"Erro fatal ao iniciar o {NOME_APLICACAO}.",
             erro
         )
 
@@ -53,7 +54,7 @@ def main():
         messagebox.showerror(
             "Erro ao iniciar",
             (
-                "Não foi possível iniciar o LeadFlow.\n\n"
+                f"Não foi possível iniciar o {NOME_APLICACAO}.\n\n"
                 "O problema foi registrado no arquivo de log.\n\n"
                 f"Detalhes: {erro}"
             ),
@@ -66,7 +67,7 @@ def main():
         liberar_bloqueio_instancia()
 
         logging.info(
-            "LeadFlow encerrado."
+            f"{NOME_APLICACAO} encerrado."
         )
 
 

@@ -6,6 +6,7 @@ from tkinter import messagebox
 
 from config import (
     ARQUIVO_LOG,
+    NOME_APLICACAO,
     preparar_ambiente,
 )
 
@@ -19,7 +20,7 @@ def configurar_logs():
     Configura o arquivo de registro de erros.
 
     O arquivo ficará em:
-    AppData/Local/LeadFlow/logs/leadflow.log
+    AppData/Local/Zarken Leads/logs/zarken-leads.log
     """
 
     preparar_ambiente()
@@ -51,7 +52,7 @@ def configurar_logs():
     )
 
     logging.info(
-        "LeadFlow iniciado."
+        f"{NOME_APLICACAO} iniciado."
     )
 
 
@@ -108,7 +109,7 @@ def tratar_erro_tkinter(
     messagebox.showerror(
         "Erro inesperado",
         (
-            "O LeadFlow encontrou um erro inesperado.\n\n"
+            f"O {NOME_APLICACAO} encontrou um erro inesperado.\n\n"
             "O problema foi registrado no arquivo de log.\n\n"
             f"Detalhes: {erro}"
         )
@@ -117,7 +118,7 @@ def tratar_erro_tkinter(
 
 def adquirir_bloqueio_instancia():
     """
-    Impede que duas instâncias do LeadFlow
+    Impede que duas instâncias do Zarken Leads
     sejam abertas simultaneamente.
     """
 

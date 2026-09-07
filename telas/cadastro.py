@@ -6,7 +6,6 @@ from tkinter import (
 
 from componentes.campos import (
     criar_campos,
-    OPCAO_EMAIL_NAO_INFORMADO,
 )
 
 from servicos.leads import (
@@ -16,6 +15,7 @@ from servicos.leads import (
 
 def abrir_cadastro():
     janela_cadastro = tk.Toplevel()
+    janela_pai = janela_cadastro.master
 
     janela_cadastro.title(
         "Cadastrar Lead"
@@ -33,50 +33,6 @@ def abrir_cadastro():
     campos = criar_campos(
         janela_cadastro
     )
-
-    def limpar_campos():
-        for chave, campo in (
-            campos.items()
-        ):
-            if isinstance(
-                campo,
-                tk.Text
-            ):
-                campo.delete(
-                    "1.0",
-                    tk.END
-                )
-
-            elif isinstance(
-                campo,
-                ttk.Combobox
-            ):
-                if chave == "unidade":
-                    campo.set("")
-
-                elif chave == "status":
-                    campo.set(
-                        "EM ANDAMENTO"
-                    )
-
-                elif chave == "email":
-                    campo.set(
-                        OPCAO_EMAIL_NAO_INFORMADO
-                    )
-
-                elif chave == "aplicacao":
-                    campo.set(
-                        "S, F, DTF, DTG E UV"
-                    )
-
-                else:
-                    campo.set("")
-
-            else:
-                campo.delete(
-                    0,
-                    tk.END
-                )
 
     def salvar():
         dados = {}
@@ -157,20 +113,16 @@ def abrir_cadastro():
 
             return
 
+        janela_cadastro.destroy()
+
         messagebox.showinfo(
             "Sucesso",
             (
                 "Lead cadastrado "
                 "com sucesso!"
             ),
-            parent=janela_cadastro
+            parent=janela_pai
         )
-
-        limpar_campos()
-
-        campos[
-            "proximo_contato"
-        ].focus_set()
 
     ttk.Button(
         janela_cadastro,

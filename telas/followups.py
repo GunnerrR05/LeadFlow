@@ -18,6 +18,7 @@ from componentes.acoes_lead import (
     copiar_whatsapp,
     abrir_whatsapp,
 )
+from componentes.detalhes_lead import PainelDetalhesLead
 
 
 STATUS = [
@@ -193,7 +194,7 @@ def abrir_followups():
 
     container = ttk.Frame(
         janela,
-        padding=15
+        padding=10
     )
 
     container.pack(
@@ -206,11 +207,11 @@ def abrir_followups():
         text="Follow-ups",
         font=(
             "Arial",
-            22,
+            18,
             "bold"
         )
     ).pack(
-        pady=(0, 5)
+        pady=(0, 10)
     )
 
     label_resumo = ttk.Label(
@@ -218,12 +219,14 @@ def abrir_followups():
         text="",
         font=(
             "Arial",
-            11
+            10,
+            "bold"
         )
     )
 
     label_resumo.pack(
-        pady=(0, 15)
+        anchor="w",
+        pady=(0, 10)
     )
 
     abas = ttk.Notebook(
@@ -392,11 +395,17 @@ def abrir_followups():
     )
 
     botao_registrar = None
+    botao_detalhes = None
     botao_copiar = None
     botao_copiar_whatsapp = None
     botao_whatsapp = None
 
     def desabilitar_registro():
+        if botao_detalhes is not None:
+            botao_detalhes.configure(
+                state="disabled"
+            )
+
         if botao_registrar is not None:
             botao_registrar.configure(
                 state="disabled"
@@ -421,6 +430,11 @@ def abrir_followups():
             )
 
     def habilitar_registro():
+        if botao_detalhes is not None:
+            botao_detalhes.configure(
+                state="normal"
+            )
+
         if botao_registrar is not None:
             botao_registrar.configure(
                 state="normal"
@@ -774,6 +788,68 @@ def abrir_followups():
                 ),
                 parent=janela
             )
+
+    def abrir_detalhes_lead():
+        if lead_selecionado is None:
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um lead primeiro.",
+                parent=janela
+            )
+            return
+
+        janela_detalhes = tk.Toplevel(
+            janela
+        )
+        janela_detalhes.title(
+            "Detalhes do Lead"
+        )
+        janela_detalhes.geometry(
+            "1100x720"
+        )
+        janela_detalhes.minsize(
+            900,
+            620
+        )
+        janela_detalhes.transient(
+            janela
+        )
+
+        container_detalhes = ttk.Frame(
+            janela_detalhes,
+            padding=12
+        )
+        container_detalhes.pack(
+            expand=True,
+            fill="both"
+        )
+
+        ttk.Label(
+            container_detalhes,
+            text="Detalhes do Lead",
+            font=("Arial", 18, "bold")
+        ).pack(
+            pady=(0, 10)
+        )
+
+        painel = PainelDetalhesLead(
+            container_detalhes
+        )
+        painel.pack(
+            expand=True,
+            fill="both"
+        )
+        painel.exibir(
+            lead_selecionado
+        )
+
+        ttk.Button(
+            container_detalhes,
+            text="Fechar",
+            command=janela_detalhes.destroy
+        ).pack(
+            pady=(10, 0)
+        )
 
     def abrir_registro_contato():
         nonlocal lead_selecionado
@@ -1362,7 +1438,7 @@ def abrir_followups():
         tabela.bind(
             "<Double-1>",
             lambda evento: (
-                abrir_registro_contato()
+                abrir_detalhes_lead()
             )
         )
 
@@ -1371,6 +1447,18 @@ def abrir_followups():
         text="Atualizar",
         command=carregar
     ).pack(
+        side="left",
+        padx=5
+    )
+
+    botao_detalhes = ttk.Button(
+        frame_botoes,
+        text="Ver Detalhes",
+        command=abrir_detalhes_lead,
+        state="disabled"
+    )
+
+    botao_detalhes.pack(
         side="left",
         padx=5
     )
