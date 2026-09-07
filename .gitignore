@@ -1,13 +1,30 @@
-# Cache do Py
-__pycache__/
-*.pyc
-
-# Configurações do VS
+# Configurações do VS Code
 .vscode/
 
-# Ambiente virtual 
+# Ambiente virtual
 venv/
 .env
 
-# Banco de dados local
-leads.xlsx
+# Dados locais
+*.xlsx
+*.xls
+
+# Backups e arquivos temporários
+backups/
+output/
+tmp/
+*.lock
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Arquivos gerados pelo PyInstaller
+build/
+dist/
+*.spec
+*.exe
+
+# Logs
+logs/
+*.log

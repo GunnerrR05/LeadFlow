@@ -1,100 +1,75 @@
-from excel import salvar_lead, listar_leads, atualizar_status, dashboard, listar_followups
+import logging
+import tkinter as tk
+from tkinter import messagebox
 
-def cadastrar_lead():
-    nome = input("Nome: ")
-    telefone = input("Telefone: ")
-    email = input("Email: ")
-    interesse = input("Interesse: ")
-    origem = input("Origem: ")
-    consultor = input("Consultor: ")
-    observacoes = input("Observações: ")
-    proximo_contato = input("Próximo contato (DD/MM/AAAA): ")
-    ultima_interacao = input("Última interação: ")
-    print("""
-    Prioridade:
-    1 - Quente
-    2 - Morno
-    3 - Frio
-    """)
-    opcao_prioridade = input("Escolha: ")
-    prioridades = {
-        "1": "Quente",
-        "2": "Morno",
-        "3": "Frio"
-    }
-    prioridade = prioridades.get(opcao_prioridade, "Morno")
+from excel import criar_planilha
+from interface import iniciar_interface
+from config import NOME_APLICACAO
+
+from sistema import (
+    adquirir_bloqueio_instancia,
+    configurar_logs,
+    liberar_bloqueio_instancia,
+    registrar_erro,
+)
 
 
+def mostrar_programa_aberto():
+    janela_aviso = tk.Tk()
+    janela_aviso.withdraw()
 
-    return{
-        "nome": nome,
-        "telefone": telefone,
-        "email": email,
-        "interesse": interesse,
-        "origem": origem,
-        "consultor": consultor,
-        "observacao": observacoes,
-        "status": "Novo",
-        "prioridade": prioridade,
-        "proximo_contato": proximo_contato,
-        "ultima_interacao": ultima_interacao
-    }
+    messagebox.showwarning(
+        f"{NOME_APLICACAO} já está aberto",
+        (
+            f"O {NOME_APLICACAO} já está sendo executado.\n\n"
+            "Feche a janela que já está aberta "
+            "antes de iniciar novamente."
+        ),
+        parent=janela_aviso
+    )
+
+    janela_aviso.destroy()
 
 
-while True:
-    print("\n===== MENU =====")
-    print("1 - Cadastrar lead")
-    print("2 - Listar leads")
-    print("3 - Atualizar status")
-    print("4 - Dashboard")
-    print("5 - Follow-ups")
-    print("6 - Sair")
+def main():
+    configurar_logs()
 
-    opcao = input("Escolha: ")
+    if not adquirir_bloqueio_instancia():
+        mostrar_programa_aberto()
+        return
 
-    if opcao == "1":
-        lead = cadastrar_lead()
-        salvar_lead(lead)
-        print("Lead cadastrado com sucesso!")
+    try:
+        criar_planilha()
+        iniciar_interface()
 
-    elif opcao == "2":
-        listar_leads()
+    except Exception as erro:
+        registrar_erro(
+            f"Erro fatal ao iniciar o {NOME_APLICACAO}.",
+            erro
+        )
 
-    elif opcao == "3":
+        janela_erro = tk.Tk()
+        janela_erro.withdraw()
 
-        telefone = input("Telefone do lead: ")
+        messagebox.showerror(
+            "Erro ao iniciar",
+            (
+                f"Não foi possível iniciar o {NOME_APLICACAO}.\n\n"
+                "O problema foi registrado no arquivo de log.\n\n"
+                f"Detalhes: {erro}"
+            ),
+            parent=janela_erro
+        )
 
-        print("""
-    1 - Novo
-    2 - Contato realizado
-    3 - Proposta enviada
-    4 - Fechado
-    5 - Perdido
-    """)
+        janela_erro.destroy()
 
-        escolha = input("Novo status: ")
+    finally:
+        liberar_bloqueio_instancia()
 
-        status = {
-            "1": "Novo",
-            "2": "Contato realizado",
-            "3": "Proposta enviada",
-            "4": "Fechado",
-            "5": "Perdido"
-        }
+        logging.info(
+            f"{NOME_APLICACAO} encerrado."
+        )
 
-        atualizar_status(telefone, status[escolha])
 
-        print("Status atualizado!")
-
-    elif opcao == "4":
-
-        dashboard()
-
-    elif opcao == "5":
-        listar_followups()
-
-    elif opcao == "6":
-        print("Encerrando o sistema...")
-        break
-    else:
-        print("Opção inválida. Tente novamente.")
+if __name__ == "__main__":
+    main()
